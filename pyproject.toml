@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "shot-fpfh"
+version = "0.1.0"
+description = ""
+authors = ["aubin-tchoi <aubin.tchoi@gmail.com>"]
+readme = "README.md"
+packages = [{include = "shot_fpfh"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.24.2"
+scikit-learn = "^1.2.2"
+matplotlib = "^3.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
