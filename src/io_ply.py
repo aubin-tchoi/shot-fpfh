@@ -2,6 +2,7 @@
 Utility functions to read/write .ply files
 """
 import sys
+from typing import Tuple
 
 import numpy as np
 
@@ -241,6 +242,7 @@ def describe_element(name, df):
             element.append("property " + f + " " + df.columns.values[i])
 
     return element
+
 
 def get_data(data_path: str, ref_path: str) -> Tuple[np.ndarray, np.ndarray]:
     data = read_ply(data_path)
