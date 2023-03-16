@@ -13,7 +13,7 @@ from tqdm import tqdm
 from .perf_monitoring import timeit
 
 
-def get_local_rf(point: np.ndarray, neighbors: np.ndarray) -> np.ndarray:
+def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.ndarray:
     """
     Extracts a local reference frame based on the eigendecomposition of the weighted covariance matrix.
     """
@@ -22,7 +22,9 @@ def get_local_rf(point: np.ndarray, neighbors: np.ndarray) -> np.ndarray:
 
     # EVD of the weighted covariance matrix
     distances = np.linalg.norm(neighbors - point, axis=1)
-    weighted_cov_matrix = centered_points.T @ (centered_points * distances[:, None])
+    weighted_cov_matrix = centered_points.T @ (
+        centered_points * (radius - distances[:, None])
+    )
     eigenvalues, eigenvectors = np.linalg.eigh(weighted_cov_matrix)
 
     # disambiguating the axes
@@ -182,12 +184,14 @@ def compute_shot_descriptor(
         )
     )
 
-    for i, point in tqdm(enumerate(query_points)):
+    for i, point in tqdm(
+        enumerate(query_points), desc="Descriptors computed", total=len(query_points)
+    ):
         descriptor = np.zeros(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)
         )
         neighbors = cloud_points[neighborhoods[i]]
-        eigenvectors = get_local_rf(point, neighbors)
+        eigenvectors = get_local_rf(point, neighbors, radius)
         local_coordinates = (neighbors - point) @ eigenvectors
         cosine = np.clip(normals[neighborhoods[i]] @ eigenvectors[:, 2].T, -1, 1)
 
@@ -209,11 +213,12 @@ def compute_shot_descriptor(
         dist_sign = np.sign(bin_dist)  # left-neighbor or right-neighbor
         abs_bin_dist = dist_sign * bin_dist  # probably faster than np.abs
         descriptor[
-            (bin_idx + dist_sign).astype(int) % n_cosine_bins, azimuth_idx, elevation_idx, radial_idx
+            (bin_idx + dist_sign).astype(int) % n_cosine_bins,
+            azimuth_idx,
+            elevation_idx,
+            radial_idx,
         ] += abs_bin_dist * ((bin_idx > -0.5) & (bin_idx < n_cosine_bins - 0.5))
-        descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += (
-            1 - abs_bin_dist
-        )
+        descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += 1 - abs_bin_dist
 
         # interpolation on the adjacent husks
         outer_bin, inner_bin, current_bin = interpolate_on_adjacent_husks(
@@ -250,11 +255,12 @@ def compute_shot_descriptor(
         dist_sign = np.sign(azimuth_dist)  # left-neighbor or right-neighbor
         abs_bin_dist = dist_sign * azimuth_dist
         descriptor[
-            bin_idx, (azimuth_idx + dist_sign).astype(int) % n_azimuth_bins, elevation_idx, radial_idx
+            bin_idx,
+            (azimuth_idx + dist_sign).astype(int) % n_azimuth_bins,
+            elevation_idx,
+            radial_idx,
         ] += abs_bin_dist
-        descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += (
-            1 - abs_bin_dist
-        )
+        descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += 1 - abs_bin_dist
 
         # normalizing the descriptor to Euclidian norm 1
         all_descriptors[i] = (descriptor / np.linalg.norm(descriptor)).flatten()
