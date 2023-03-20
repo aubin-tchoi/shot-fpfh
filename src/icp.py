@@ -97,3 +97,18 @@ def icp_point_to_point(
     print(f"Final RMS: {rms:.4f}")
 
     return data_aligned
+
+
+def icp_point_to_plane(
+    points: np.ndarray,
+    normals: np.ndarray,
+    ref: np.ndarray,
+    ref_normals: np.ndarray,
+    max_iter: int,
+    rms_threshold: float,
+) -> np.ndarray:
+    """
+    Point to plane ICP.
+    More robust to point clouds of variable densities where the plane estimations by the normals are good.
+    """
+    pass
