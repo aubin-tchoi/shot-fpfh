@@ -2,14 +2,17 @@ from typing import Tuple
 
 import numpy as np
 from sklearn.neighbors import KDTree
+from tqdm import trange
 
+from .perf_monitoring import timeit
 from .utils import best_rigid_transform, compute_rigid_transform_error
 
 # setting a seed
 rng = np.random.default_rng(seed=1)
 
 
-def simple_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.ndarray:
+@timeit
+def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.ndarray:
     """
     Matching strategy that matches each descriptor with its nearest neighbor in the feature space.
 
@@ -21,10 +24,15 @@ def simple_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.
         Indices of the matches established.
 
     """
-    kdtree = KDTree(ref_descriptors)
-    return kdtree.query(descriptors, return_distance=False).squeeze()
+    distances = np.zeros((descriptors.shape[0], ref_descriptors.shape[0]))
+    for i in trange(descriptors.shape[0], desc="Distances computed", delay=1):
+        for j in range(ref_descriptors.shape[0]):
+            distances[i, j] = np.linalg.norm(descriptors[i] - ref_descriptors[j])
+
+    return distances.argmin(axis=1)
 
 
+@timeit
 def double_matching_with_rejects(
     descriptors: np.ndarray, ref_descriptors: np.ndarray, threshold: float
 ) -> np.ndarray:
@@ -48,6 +56,7 @@ def double_matching_with_rejects(
     return matches[distances[:, 0] / distances[:, 1] >= threshold]
 
 
+@timeit
 def ransac_matching(
     point_cloud: np.ndarray,
     descriptors: np.ndarray,
