@@ -1,43 +1,11 @@
 """
 Implementation of the ICP method.
 """
-from typing import Tuple
 
 import numpy as np
 from sklearn.neighbors import KDTree
 
-
-def best_rigid_transform(
-    data: np.ndarray, ref: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Computes the least-squares best-fit transform that maps corresponding points data to ref.
-    Inputs :
-        data = (d x N) matrix where "N" is the number of points and "d" the dimension
-         ref = (d x N) matrix where "N" is the number of points and "d" the dimension
-    Returns :
-           R = (d x d) rotation matrix
-           T = (d x 1) translation vector
-           Such that R * data + T is aligned on ref
-    """
-
-    data_barycenter = data.mean(axis=1)
-    ref_barycenter = ref.mean(axis=1)
-    covariance_matrix = (data - data_barycenter[:, np.newaxis]).squeeze() @ (
-        ref - ref_barycenter[:, np.newaxis]
-    ).squeeze().T
-    u, sigma, v = np.linalg.svd(covariance_matrix)
-    rotation = v.T @ u.T
-
-    # ensuring that we have a direct rotation (determinant equal to 1 and not -1)
-    if np.linalg.det(rotation) < 0:
-        u_transpose = u.T
-        u_transpose[-1] *= -1
-        rotation = v.T @ u_transpose
-
-    translation = ref_barycenter - rotation.dot(data_barycenter)
-
-    return rotation, translation
+from .utils import best_rigid_transform, compute_rigid_transform_error
 
 
 def icp_point_to_point(
@@ -75,16 +43,13 @@ def icp_point_to_point(
         indexes = np.random.choice(data.shape[1], sampling_limit, replace=False)
         data_aligned_subset = data_aligned[:, indexes]
         neighbors = kdtree.query(data_aligned_subset.T, return_distance=False).squeeze()
-        R, T = best_rigid_transform(
+        rms, data_aligned = compute_rigid_transform_error(
             data_aligned_subset,
             ref[:, neighbors],
-        )
-        data_aligned = R.dot(data_aligned) + T[:, np.newaxis]
-        rms = np.sqrt(
-            np.sum(
-                (data_aligned_subset - ref[:, neighbors]) ** 2,
-                axis=0,
-            ).mean()
+            *best_rigid_transform(
+                data_aligned_subset,
+                ref[:, neighbors],
+            ),
         )
 
         if rms < rms_threshold:
