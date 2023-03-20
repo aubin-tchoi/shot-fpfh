@@ -49,15 +49,16 @@ def compute_fpfh_descriptor(
             / neighborhoods[i].shape[0]
         )
 
-    neighborhoods = kdtree.query(query_points, k, return_distance=False)
-    fpfh = np.zeros((query_points.shape[0], n_bins, n_bins, n_bins))
-    for i, point in tqdm(
-        enumerate(query_points), desc="FPFH", total=query_points.shape[0]
-    ):
-        distances = np.linalg.norm(cloud_points[neighborhoods[i]] - point, axis=1)
-        fpfh[i] = (
-            spfh[i]
-            + (spfh[neighborhoods[i]] / distances[:, None, None, None]).sum() / k
-        )
+    neighborhoods = kdtree.query(
+        cloud_points[query_points_indices], k, return_distance=False
+    )
+    distances = np.linalg.norm(
+        cloud_points[neighborhoods] - cloud_points[query_points_indices][:, None],
+        axis=2,
+    )
+    fpfh = (
+        spfh[query_points_indices]
+        + (spfh[neighborhoods] / distances[:, :, None, None, None]).sum(axis=1) / k
+    )
 
     return fpfh
