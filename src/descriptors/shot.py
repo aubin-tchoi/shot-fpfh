@@ -10,7 +10,8 @@ from typing import Tuple
 import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
-from .perf_monitoring import timeit
+
+from src.perf_monitoring import timeit
 
 
 def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.ndarray:
@@ -184,9 +185,7 @@ def compute_shot_descriptor(
         )
     )
 
-    for i, point in tqdm(
-        enumerate(query_points), desc="SHOT", total=len(query_points)
-    ):
+    for i, point in tqdm(enumerate(query_points), desc="SHOT", total=len(query_points)):
         descriptor = np.zeros(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)
         )

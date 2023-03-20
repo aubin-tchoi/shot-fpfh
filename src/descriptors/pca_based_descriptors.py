@@ -7,6 +7,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.neighbors import KDTree
 
+from src.perf_monitoring import timeit
+
 
 def pca(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -86,7 +88,8 @@ def compute_local_pca(
     return all_eigenvalues, all_eigenvectors, moments, neighborhood_sizes
 
 
-def compute_basic_features(
+@timeit
+def compute_pca_based_basic_features(
     query_points: np.ndarray, cloud_points: np.ndarray, radius: float
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -112,7 +115,10 @@ def compute_basic_features(
     return verticality, linearity, planarity, sphericity
 
 
-def compute_features(query_points: np.ndarray, cloud_points: np.ndarray, radius: float):
+@timeit
+def compute_pca_based_features(
+    query_points: np.ndarray, cloud_points: np.ndarray, radius: float
+):
     """
     Computes PCA-based descriptors on a point cloud.
     """

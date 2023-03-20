@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
-from .perf_monitoring import timeit
+from src.perf_monitoring import timeit
 
 
 @timeit
@@ -55,6 +55,9 @@ def compute_fpfh_descriptor(
         enumerate(query_points), desc="FPFH", total=query_points.shape[0]
     ):
         distances = np.linalg.norm(cloud_points[neighborhoods[i]] - point, axis=1)
-        fpfh[i] = spfh[i] + (spfh[neighborhoods[i]] / distances[:, None, None, None]).sum() / k
+        fpfh[i] = (
+            spfh[i]
+            + (spfh[neighborhoods[i]] / distances[:, None, None, None]).sum() / k
+        )
 
     return fpfh
