@@ -1,5 +1,8 @@
 import numpy as np
 
+# setting a seed
+rng = np.random.default_rng(seed=1)
+
 
 def select_query_points(points: np.ndarray) -> np.ndarray:
     """
@@ -10,3 +13,12 @@ def select_query_points(points: np.ndarray) -> np.ndarray:
     is kept.
     """
     pass
+
+
+def select_query_points_randomly(
+    points: np.ndarray, n_feature_points: int
+) -> np.ndarray:
+    """
+    Selects a random subset of the points to create a set of key points on which descriptors will be computed.
+    """
+    return rng.choice(points, n_feature_points, replace=False, shuffle=False)
