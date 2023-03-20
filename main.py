@@ -2,7 +2,7 @@ import argparse
 
 import numpy as np
 
-from src import read_ply, compute_shot_descriptor, compute_fpfh_descriptor
+from src import get_data, compute_shot_descriptor, compute_fpfh_descriptor
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,9 +26,7 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
 
-    data = read_ply(args.file_path)
-    points = np.vstack((data["x"], data["y"], data["z"])).T
-    normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+    points, normals = get_data(args.file_path)
 
-    compute_fpfh_descriptor(points, points, normals, radius=5 * 1e-3, k=10)
+    compute_fpfh_descriptor(points, points, normals, radius=5 * 1e-3, k=12, n_bins=5)
     compute_shot_descriptor(points, points, normals, radius=5 * 1e-3)

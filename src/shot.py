@@ -185,7 +185,7 @@ def compute_shot_descriptor(
     )
 
     for i, point in tqdm(
-        enumerate(query_points), desc="Descriptors computed", total=len(query_points)
+        enumerate(query_points), desc="SHOT", total=len(query_points)
     ):
         descriptor = np.zeros(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)

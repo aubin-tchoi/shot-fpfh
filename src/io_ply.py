@@ -244,11 +244,14 @@ def describe_element(name, df):
     return element
 
 
-def get_data(data_path: str, ref_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def get_data(data_path: str, remove_duplicates: bool = True) -> Tuple[np.ndarray, np.ndarray]:
     data = read_ply(data_path)
-    ref = read_ply(ref_path)
 
-    return (
-        np.vstack((data["x"], data["y"], data["z"])),
-        np.vstack((ref["x"], ref["y"], ref["z"])),
-    )
+    points = np.vstack((data["x"], data["y"], data["z"])).T
+    normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+
+    if remove_duplicates:
+        filtered_indexes = np.unique(points.round(decimals=4), axis=0, return_index=True)[1]
+        return points[filtered_indexes], normals[filtered_indexes]
+
+    return points, normals
