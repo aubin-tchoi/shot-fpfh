@@ -1,8 +1,10 @@
 from typing import Tuple
 
 import numpy as np
+from .perf_monitoring import timeit
 
 
+@timeit
 def best_rigid_transform(
     data: np.ndarray, ref: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
