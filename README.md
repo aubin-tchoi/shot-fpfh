@@ -1,6 +1,6 @@
 # SHOT / FPFH descriptors on 3D Point Clouds
 
-## Things that did not work but maybe could work
+## Possible performance-improving extensions
 
 Using `numba` to jit the code. The compilation is quite long and the jitting fails on various functions
 like `KDTree.query_radius` or `np.mean` (https://stackoverflow.com/questions/57500001/numba-failure-with-np-mean).

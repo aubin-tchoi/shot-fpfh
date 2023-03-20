@@ -14,7 +14,7 @@ from src.perf_monitoring import timeit
 
 @timeit
 def compute_fpfh_descriptor(
-    query_points: np.ndarray,
+    query_points_indices: np.ndarray,
     cloud_points: np.ndarray,
     normals: np.ndarray,
     radius: float,
@@ -23,10 +23,11 @@ def compute_fpfh_descriptor(
 ) -> np.ndarray:
     kdtree = KDTree(cloud_points)
 
-    neighborhoods = kdtree.query_radius(query_points, radius)
-    spfh = np.zeros((query_points.shape[0], n_bins, n_bins, n_bins))
+    neighborhoods = kdtree.query_radius(cloud_points, radius)
+    spfh = np.zeros((cloud_points.shape[0], n_bins, n_bins, n_bins))
+
     for i, point in tqdm(
-        enumerate(query_points), desc="SPFH", total=query_points.shape[0]
+        enumerate(cloud_points), desc="SPFH", total=cloud_points.shape[0]
     ):
         neighbors = cloud_points[neighborhoods[i]]
         neighbors_normals = normals[neighborhoods[i]]
