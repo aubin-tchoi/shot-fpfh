@@ -58,4 +58,4 @@ def compute_fpfh_descriptor(
         + (spfh[neighborhoods[:, 1:]] / distances[:, 1:, None, None, None]).sum(axis=1) / k
     )
 
-    return fpfh
+    return fpfh.reshape(query_points_indices.shape[0], -1)

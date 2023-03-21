@@ -22,11 +22,10 @@ def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.n
 
     Returns:
         Indices of the matches established.
-
     """
     distances = cdist(
-        descriptors.reshape(descriptors.shape[0], -1),
-        ref_descriptors.reshape((ref_descriptors.shape[0], -1)),
+        descriptors,
+        ref_descriptors
     )
 
     return distances.argmin(axis=1)
@@ -52,8 +51,8 @@ def double_matching_with_rejects(
         matches_indices_ref: Indices of the matches established in the reference array.
     """
     distances = cdist(
-        descriptors.reshape(descriptors.shape[0], -1),
-        ref_descriptors.reshape((ref_descriptors.shape[0], -1)),
+        descriptors,
+        ref_descriptors,
     )
 
     nearest_neighbor_indices = np.argsort(distances, axis=1)[:, :2]
