@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import numpy as np
+from scipy.spatial.distance import cdist
 from sklearn.neighbors import KDTree
-from tqdm import trange
 
 from .perf_monitoring import timeit
 from .utils import best_rigid_transform, compute_rigid_transform_error
@@ -24,10 +24,10 @@ def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.n
         Indices of the matches established.
 
     """
-    distances = np.zeros((descriptors.shape[0], ref_descriptors.shape[0]))
-    for i in trange(descriptors.shape[0], desc="Distances computed", delay=1):
-        for j in range(ref_descriptors.shape[0]):
-            distances[i, j] = np.linalg.norm(descriptors[i] - ref_descriptors[j])
+    distances = cdist(
+        descriptors.reshape(descriptors.shape[0], -1),
+        ref_descriptors.reshape((ref_descriptors.shape[0], -1)),
+    )
 
     return distances.argmin(axis=1)
 
@@ -35,7 +35,7 @@ def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.n
 @timeit
 def double_matching_with_rejects(
     descriptors: np.ndarray, ref_descriptors: np.ndarray, threshold: float
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and rejects matches where
     the ratio between the distance to the closest neighbor and to the second-closest neighbor is below a threshold.
@@ -48,12 +48,20 @@ def double_matching_with_rejects(
         threshold: Threshold for rejection of incorrect matches.
 
     Returns:
-        Indices of the matches established.
+        matches_indices: Indices of the matches established in the initial array.
+        matches_indices_ref: Indices of the matches established in the reference array.
     """
-    kdtree = KDTree(ref_descriptors)
-    distances, matches = kdtree.query(descriptors, 2)
+    distances = cdist(
+        descriptors.reshape(descriptors.shape[0], -1),
+        ref_descriptors.reshape((ref_descriptors.shape[0], -1)),
+    )
 
-    return matches[distances[:, 0] / distances[:, 1] >= threshold]
+    nearest_neighbor_indices = np.argsort(distances, axis=1)[:, :2]
+
+    neighbors_distances = np.take_along_axis(distances, nearest_neighbor_indices, axis=1)
+    mask = (neighbors_distances[:, 0] / neighbors_distances[:, 1] >= threshold)
+
+    return mask.nonzero()[0], nearest_neighbor_indices[mask, 0]
 
 
 @timeit
