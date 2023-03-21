@@ -11,19 +11,19 @@ def best_rigid_transform(
     """
     Computes the least-squares best-fit transform that maps corresponding points data to ref.
     Inputs :
-        data = (d x N) matrix where "N" is the number of points and "d" the dimension
-         ref = (d x N) matrix where "N" is the number of points and "d" the dimension
+        data = (N x d) matrix where "N" is the number of points and "d" the dimension
+         ref = (N x d) matrix where "N" is the number of points and "d" the dimension
     Returns :
            R = (d x d) rotation matrix
            T = (d x 1) translation vector
            Such that R * data + T is aligned on ref
     """
 
-    data_barycenter = data.mean(axis=1)
-    ref_barycenter = ref.mean(axis=1)
-    covariance_matrix = (data - data_barycenter[:, np.newaxis]).squeeze() @ (
-        ref - ref_barycenter[:, np.newaxis]
-    ).squeeze().T
+    data_barycenter = data.mean(axis=0)
+    ref_barycenter = ref.mean(axis=0)
+    covariance_matrix = (data - data_barycenter).T.dot(
+        ref - ref_barycenter
+    )
     u, sigma, v = np.linalg.svd(covariance_matrix)
     rotation = v.T @ u.T
 
@@ -48,7 +48,7 @@ def compute_rigid_transform_error(
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.
     """
-    transformed_data = rotation.dot(data) + translation[:, np.newaxis]
+    transformed_data = data.dot(rotation.T) + translation
     return (
         np.sqrt(
             np.sum(
