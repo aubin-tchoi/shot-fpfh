@@ -77,6 +77,12 @@ def parse_args() -> argparse.Namespace:
         default=1e-1,
         help="Radius in the neighborhood search when computing SHOT.",
     )
+    parser.add_argument(
+        "--reject_threshold",
+        type=float,
+        default=0.8,
+        help="Threshold in the double matching algorithm.",
+    )
 
     return parser.parse_args()
 
@@ -113,10 +119,15 @@ if __name__ == "__main__":
     )
 
     fpfh_ref = compute_fpfh_descriptor(
-        points_ref_subset, points_ref, normals_ref, radius=1e-2, k=24, n_bins=5
+        points_ref_subset,
+        points_ref,
+        normals_ref,
+        radius=args.fpfh_radius,
+        k=args.fpfh_k,
+        n_bins=args.fpfh_n_bins,
     )
     shot_ref = compute_shot_descriptor(
-        points_ref[points_ref_subset], points_ref, normals_ref, radius=1e-1
+        points_ref[points_ref_subset], points_ref, normals_ref, radius=args.shot_radius
     )
     timer(
         f"Time spent computing the descriptors on the reference point cloud ({points_ref.shape[0]} points)"
@@ -158,7 +169,7 @@ if __name__ == "__main__":
         timer()
     elif args.matching_algorithm == "ransac":
         matches_fpfh, matches_fpfh_ref = double_matching_with_rejects(
-            fpfh, fpfh_ref, 0.8
+            fpfh, fpfh_ref, args.reject_threshold
         )
         timer("Time spent finding matches between the FPFH descriptors")
 
@@ -172,7 +183,7 @@ if __name__ == "__main__":
         )
 
         matches_shot, matches_shot_ref = double_matching_with_rejects(
-            shot, shot_ref, 0.8
+            shot, shot_ref, args.reject_threshold
         )
         timer("Time spent finding matches between the SHOT descriptors")
 
