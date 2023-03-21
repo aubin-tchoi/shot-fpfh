@@ -2,7 +2,6 @@ from typing import Tuple
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from sklearn.neighbors import KDTree
 
 from .perf_monitoring import timeit
 from .utils import best_rigid_transform, compute_rigid_transform_error
@@ -23,17 +22,17 @@ def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.n
     Returns:
         Indices of the matches established.
     """
-    distances = cdist(
-        descriptors,
-        ref_descriptors
-    )
+    distances = cdist(descriptors, ref_descriptors)
 
     return distances.argmin(axis=1)
 
 
 @timeit
 def double_matching_with_rejects(
-    descriptors: np.ndarray, ref_descriptors: np.ndarray, threshold: float
+    descriptors: np.ndarray,
+    ref_descriptors: np.ndarray,
+    threshold: float,
+    verbose: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and rejects matches where
@@ -45,6 +44,7 @@ def double_matching_with_rejects(
         descriptors: Descriptors computed on the dataset of interest.
         ref_descriptors: Descriptors computed on the reference dataset.
         threshold: Threshold for rejection of incorrect matches.
+        verbose: Adds verbosity to the execution of the function.
 
     Returns:
         matches_indices: Indices of the matches established in the initial array.
@@ -57,8 +57,13 @@ def double_matching_with_rejects(
 
     nearest_neighbor_indices = np.argsort(distances, axis=1)[:, :2]
 
-    neighbors_distances = np.take_along_axis(distances, nearest_neighbor_indices, axis=1)
-    mask = (neighbors_distances[:, 0] / neighbors_distances[:, 1] >= threshold)
+    neighbors_distances = np.take_along_axis(
+        distances, nearest_neighbor_indices, axis=1
+    )
+    mask = neighbors_distances[:, 0] / neighbors_distances[:, 1] >= threshold
+
+    if verbose:
+        print(f"Kept {mask.sum()} matches out of {descriptors.shape[0]} descriptors.")
 
     return mask.nonzero()[0], nearest_neighbor_indices[mask, 0]
 
@@ -71,7 +76,7 @@ def ransac_matching(
     ref_point_cloud: np.ndarray,
     n_draws: int = 100,
     draw_size: int = 4,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[float, Tuple[np.ndarray, np.ndarray]]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
@@ -79,8 +84,8 @@ def ransac_matching(
     Returns:
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
-    kdtree = KDTree(ref_descriptors)
-    matches = kdtree.query(descriptors, return_distance=False).squeeze()
+    distances = cdist(descriptors, ref_descriptors)
+    matches = distances.argmin(axis=1)
 
     best_rms: float | None = None
     best_transform: Tuple[np.ndarray, np.ndarray] | None = None
@@ -98,4 +103,4 @@ def ransac_matching(
             best_rms = rms
             best_transform = (rotation, translation)
 
-    return best_transform
+    return best_rms, best_transform
