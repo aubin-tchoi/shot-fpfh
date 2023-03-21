@@ -22,10 +22,10 @@ def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.
     centered_points = neighbors - barycenter
 
     # EVD of the weighted covariance matrix
-    distances = np.linalg.norm(neighbors - point, axis=1)
+    radius_minus_distances = radius - np.linalg.norm(neighbors - point, axis=1)
     weighted_cov_matrix = centered_points.T @ (
-        centered_points * (radius - distances[:, None])
-    )
+        centered_points * radius_minus_distances[:, None]
+    ) / radius_minus_distances.sum()
     eigenvalues, eigenvectors = np.linalg.eigh(weighted_cov_matrix)
 
     # disambiguating the axes
@@ -262,6 +262,6 @@ def compute_shot_descriptor(
         descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += 1 - abs_bin_dist
 
         # normalizing the descriptor to Euclidian norm 1
-        all_descriptors[i] = (descriptor / np.linalg.norm(descriptor)).flatten()
+        all_descriptors[i] = (descriptor / np.linalg.norm(descriptor)).ravel()
 
     return all_descriptors
