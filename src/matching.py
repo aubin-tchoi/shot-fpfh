@@ -70,10 +70,12 @@ def double_matching_with_rejects(
 
 @timeit
 def ransac_matching(
-    point_cloud: np.ndarray,
     descriptors: np.ndarray,
+    point_cloud_whole: np.ndarray,
+    point_cloud_subset: np.ndarray,
     ref_descriptors: np.ndarray,
-    ref_point_cloud: np.ndarray,
+    ref_point_cloud_whole: np.ndarray,
+    ref_point_cloud_subset: np.ndarray,
     n_draws: int = 100,
     draw_size: int = 4,
 ) -> Tuple[float, Tuple[np.ndarray, np.ndarray]]:
@@ -93,11 +95,11 @@ def ransac_matching(
     for _ in range(n_draws):
         draws = rng.choice(matches, draw_size, replace=False, shuffle=False)
         rotation, translation = best_rigid_transform(
-            point_cloud[draws],
-            ref_point_cloud[draws],
+            point_cloud_subset[draws],
+            ref_point_cloud_subset[draws],
         )
         rms = compute_rigid_transform_error(
-            point_cloud, ref_point_cloud, rotation, translation
+            point_cloud_whole, ref_point_cloud_whole, rotation, translation
         )[0]
         if best_rms is None or rms < best_rms:
             best_rms = rms
