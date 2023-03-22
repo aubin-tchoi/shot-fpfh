@@ -1,10 +1,9 @@
 from typing import Tuple
 
 import numpy as np
-from .perf_monitoring import timeit
+from sklearn.neighbors import KDTree
 
 
-@timeit
 def best_rigid_transform(
     data: np.ndarray, ref: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -21,9 +20,7 @@ def best_rigid_transform(
 
     data_barycenter = data.mean(axis=0)
     ref_barycenter = ref.mean(axis=0)
-    covariance_matrix = (data - data_barycenter).T.dot(
-        ref - ref_barycenter
-    )
+    covariance_matrix = (data - data_barycenter).T.dot(ref - ref_barycenter)
     u, sigma, v = np.linalg.svd(covariance_matrix)
     rotation = v.T @ u.T
 
@@ -49,10 +46,13 @@ def compute_rigid_transform_error(
     by the rotation and the translation.
     """
     transformed_data = data.dot(rotation.T) + translation
+    neighbors = (
+        KDTree(reference).query(transformed_data, return_distance=False).squeeze()
+    )
     return (
         np.sqrt(
             np.sum(
-                (transformed_data - reference) ** 2,
+                (transformed_data - reference[neighbors]) ** 2,
                 axis=0,
             ).mean()
         ),
