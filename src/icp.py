@@ -11,17 +11,17 @@ from .utils import best_rigid_transform, compute_rigid_transform_error
 def icp_point_to_point(
     data: np.ndarray,
     ref: np.ndarray,
-    max_iter: int,
-    rms_threshold: float,
-    sampling_limit: int,
+    max_iter: int = 1000,
+    rms_threshold: float = 0.1,
+    sampling_limit: int = 10,
 ) -> np.ndarray:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampled of the point clouds to fasten the computation.
 
     Args:
-        data: (d x N_data) matrix where "N_data" is the number of points and "d" the dimension
-        ref: (d x N_ref) matrix where "N_ref" is the number of points and "d" the dimension
+        data: (N_data x d) matrix where "N_data" is the number of points and "d" the dimension
+        ref: (N_ref x d) matrix where "N_ref" is the number of points and "d" the dimension
         max_iter: stop condition on the number of iterations
         rms_threshold: stop condition on the distance
         sampling_limit: number of points used at each iteration.
@@ -40,15 +40,15 @@ def icp_point_to_point(
     rms = 0.0
 
     for i in range(max_iter):
-        indexes = np.random.choice(data.shape[1], sampling_limit, replace=False)
-        data_aligned_subset = data_aligned[:, indexes]
-        neighbors = kdtree.query(data_aligned_subset.T, return_distance=False).squeeze()
+        indexes = np.random.choice(data.shape[0], sampling_limit, replace=False)
+        data_aligned_subset = data_aligned[indexes]
+        neighbors = kdtree.query(data_aligned_subset, return_distance=False).squeeze()
         rms, data_aligned = compute_rigid_transform_error(
             data_aligned_subset,
-            ref[:, neighbors],
+            ref[neighbors],
             *best_rigid_transform(
                 data_aligned_subset,
-                ref[:, neighbors],
+                ref[neighbors],
             ),
         )
 
