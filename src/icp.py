@@ -33,7 +33,7 @@ def icp_point_to_point(
         has_converged: boolean value indicating whether the method has converged or not.
     """
     data_aligned = np.copy(data)
-    kdtree = KDTree(ref.T)
+    kdtree = KDTree(ref)
 
     rms = 0.0
 
@@ -42,8 +42,8 @@ def icp_point_to_point(
         data_aligned_subset = data_aligned[indexes]
         neighbors = kdtree.query(data_aligned_subset, return_distance=False).squeeze()
         rms, data_aligned = compute_rigid_transform_error(
-            data_aligned_subset,
-            ref[neighbors],
+            data,
+            ref,
             *best_rigid_transform(
                 data_aligned_subset,
                 ref[neighbors],
