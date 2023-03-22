@@ -2,7 +2,6 @@ import argparse
 import os
 import warnings
 
-# noinspection PyUnresolvedReferences
 from src import (
     get_data,
     write_ply,
@@ -10,12 +9,12 @@ from src import (
     best_rigid_transform,
     compute_rigid_transform_error,
     # query points sampling
-    select_query_points,
     select_query_indices_randomly,
+    select_query_points_iteratively,
+    select_query_points_subsampling,
     # descriptors
     compute_shot_descriptor,
     compute_fpfh_descriptor,
-    compute_pca_based_features,
     # matching algorithms
     basic_matching,
     double_matching_with_rejects,
@@ -59,6 +58,13 @@ def parse_args() -> argparse.Namespace:
         "--disable_ply_writing",
         action="store_true",
         help="Skips saving the registered point cloud as ply files.",
+    )
+    parser.add_argument(
+        "--query_points_selection",
+        choices=["random", "iterative", "subsampling"],
+        type=str,
+        default="random",
+        help="Choice of the algorithm to select query points to compute descriptors on.",
     )
     parser.add_argument(
         "--matching_algorithm",
@@ -136,12 +142,32 @@ if __name__ == "__main__":
 
     timer("Time spent retrieving the data")
 
-    points_subset = select_query_indices_randomly(
-        points.shape[0], points.shape[0] // 10
-    )
-    points_ref_subset = select_query_indices_randomly(
-        points_ref.shape[0], points_ref.shape[0] // 10
-    )
+    if args.query_points_selection == "random":
+        print("\n-- Selecting query points randomly --")
+        points_subset = select_query_indices_randomly(
+            points.shape[0], points.shape[0] // 10
+        )
+        points_ref_subset = select_query_indices_randomly(
+            points_ref.shape[0], points_ref.shape[0] // 10
+        )
+    elif args.query_points_selection == "iterative":
+        print("\n-- Selecting query points iteratively --")
+        points_subset = select_query_points_iteratively(
+            points.shape[0], args.shot_radius / 50
+        )
+        points_ref_subset = select_query_points_iteratively(
+            points_ref.shape[0], args.shot_radius / 50
+        )
+    elif args.query_points_selection == "subsampling":
+        print("\n-- Selecting query points based on a subsampling on the point cloud --")
+        points_subset = select_query_points_subsampling(
+            points.shape[0], args.shot_radius / 50
+        )
+        points_ref_subset = select_query_points_subsampling(
+            points_ref.shape[0], args.shot_radius / 50
+        )
+    else:
+        raise ValueError("Incorrect query points selection algorithm.")
     timer("Time spent selecting the key points")
 
     print("\n-- Computing the descriptors --")

@@ -15,7 +15,8 @@ from .matching import basic_matching, double_matching_with_rejects, ransac_match
 from .perf_monitoring import checkpoint
 from .query_points_selection import (
     select_query_points_randomly,
-    select_query_points,
     select_query_indices_randomly,
+    select_query_points_iteratively,
+    select_query_points_subsampling,
 )
 from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
