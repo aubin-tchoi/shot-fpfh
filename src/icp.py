@@ -7,7 +7,7 @@ from typing import Tuple
 import numpy as np
 from sklearn.neighbors import KDTree
 
-from .utils import best_rigid_transform, compute_rigid_transform_error
+from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
 
 
 def icp_point_to_point(

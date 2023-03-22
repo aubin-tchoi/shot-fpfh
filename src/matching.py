@@ -4,7 +4,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 from .perf_monitoring import timeit
-from .utils import best_rigid_transform, compute_rigid_transform_error
+from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
 
 # setting a seed
 rng = np.random.default_rng(seed=1)
