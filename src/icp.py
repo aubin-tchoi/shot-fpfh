@@ -2,6 +2,8 @@
 Implementation of the ICP method.
 """
 
+from typing import Tuple
+
 import numpy as np
 from sklearn.neighbors import KDTree
 
@@ -14,7 +16,7 @@ def icp_point_to_point(
     max_iter: int = 1000,
     rms_threshold: float = 0.1,
     sampling_limit: int = 10,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampled of the point clouds to fasten the computation.
@@ -27,12 +29,8 @@ def icp_point_to_point(
         sampling_limit: number of points used at each iteration.
 
     Returns:
-        data_aligned: data aligned on reference cloud
-        R_list: list of the (d x d) rotation matrices found at each iteration
-        T_list: list of the (d x 1) translation vectors found at each iteration
-        neighbors_list: At each iteration, you search the nearest neighbors of each data point in
-        the ref cloud and this obtain a (1 x N_data) array of indices. This is the list of those
-        arrays at each iteration
+        data_aligned: data aligned on reference cloud.
+        has_converged: boolean value indicating whether the method has converged or not.
     """
     data_aligned = np.copy(data)
     kdtree = KDTree(ref.T)
@@ -61,7 +59,7 @@ def icp_point_to_point(
 
     print(f"Final RMS: {rms:.4f}")
 
-    return data_aligned
+    return data_aligned, rms < rms_threshold
 
 
 def icp_point_to_plane(
