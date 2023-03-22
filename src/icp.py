@@ -16,7 +16,7 @@ def icp_point_to_point(
     max_iter: int = 1000,
     rms_threshold: float = 0.1,
     sampling_limit: int = 10,
-) -> Tuple[np.ndarray, bool]:
+) -> Tuple[np.ndarray, float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampled of the point clouds to fasten the computation.
@@ -30,6 +30,7 @@ def icp_point_to_point(
 
     Returns:
         data_aligned: data aligned on reference cloud.
+        rms: the RMS error.
         has_converged: boolean value indicating whether the method has converged or not.
     """
     data_aligned = np.copy(data)
@@ -49,17 +50,10 @@ def icp_point_to_point(
                 ref[neighbors],
             ),
         )
-
         if rms < rms_threshold:
-            print("RMS threshold reached.")
             break
-    # for ... else clause executed if we did not break out of the loop
-    else:
-        print("Max iteration number reached.")
 
-    print(f"Final RMS: {rms:.4f}")
-
-    return data_aligned, rms < rms_threshold
+    return data_aligned, rms, rms < rms_threshold
 
 
 def icp_point_to_plane(

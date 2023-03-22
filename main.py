@@ -142,7 +142,7 @@ if __name__ == "__main__":
     )
     timer("Time spent selecting the key points")
 
-    print("\nComputing the descriptors")
+    print("\n-- Computing the descriptors --")
     fpfh = compute_fpfh_descriptor(
         points_subset,
         points,
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     # matching
     if args.matching_algorithm == "simple":
-        print("\nMatching descriptors using simple matching to closest neighbor.")
+        print("\n-- Matching descriptors using simple matching to closest neighbor --")
         matches_fpfh = basic_matching(fpfh, fpfh_ref)
         timer("Time spent finding matches between the FPFH descriptors")
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         )
         timer()
     elif args.matching_algorithm == "double":
-        print("\nMatching descriptors using double matching with rejects.")
+        print("\n-- Matching descriptors using double matching with rejects --")
         matches_fpfh, matches_fpfh_ref = double_matching_with_rejects(
             fpfh, fpfh_ref, args.reject_threshold
         )
@@ -283,7 +283,7 @@ if __name__ == "__main__":
         )
         timer()
     elif args.matching_algorithm == "ransac":
-        print("\nMatching descriptors using ransac-like matching.")
+        print("\n -- Matching descriptors using ransac-like matching --")
         rms_fpfh, (rotation_fpfh, translation_fpfh) = ransac_matching(
             fpfh,
             points,
@@ -314,15 +314,18 @@ if __name__ == "__main__":
     print(f"RMS error with SHOT: {rms_shot:.2f}.")
 
     # fine registration using an icp
-    points_aligned_fpfh_icp, has_fpfh_converged = icp_point_to_point(
+    print("\n-- Running ICPs --")
+    points_aligned_fpfh_icp, rms_fpfh_icp, has_fpfh_converged = icp_point_to_point(
         points_aligned_fpfh, points_ref
     )
-    points_aligned_shot_icp, has_shot_converged = icp_point_to_point(
+    points_aligned_shot_icp, rms_shot_icp, has_shot_converged = icp_point_to_point(
         points_aligned_shot, points_ref
     )
+    print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}.")
+    print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}.")
 
     print(
-        f"\nThe ICP starting from the registration obtained by matching"
+        f"The ICP starting from the registration obtained by matching"
         f" FPFH descriptors has{'' if has_fpfh_converged else ' not'} converged."
     )
     print(
@@ -332,7 +335,7 @@ if __name__ == "__main__":
     timer("Time spent on ICP")
 
     if not args.disable_ply_writing:
-        print("\nWriting the aligned points cloud in ply files under './data/results'")
+        print("\n -- Writing the aligned points cloud in ply files under './data/results' --")
         if not os.path.isdir("./data/results"):
             os.mkdir("./data/results")
 
