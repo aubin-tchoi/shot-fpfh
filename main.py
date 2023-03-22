@@ -1,5 +1,6 @@
 import argparse
 import warnings
+import os
 
 # noinspection PyUnresolvedReferences
 from src import (
@@ -20,6 +21,7 @@ from src import (
     basic_matching,
     double_matching_with_rejects,
     ransac_matching,
+    icp_point_to_point,
 )
 
 warnings.filterwarnings("ignore")
@@ -53,6 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--matching_algorithm",
         choices=["simple", "double", "ransac"],
+        type=str,
         default="simple",
         help="Choice of the algorithm to match descriptors.",
     )
@@ -95,11 +98,9 @@ if __name__ == "__main__":
     points_ref, normals_ref = get_data(args.ref_file_path)
     timer("Time spent retrieving the data")
 
-    points_subset = select_query_indices_randomly(
-        points.shape[0], points.shape[0] // 10
-    )
+    points_subset = select_query_indices_randomly(points.shape[0], points.shape[0] // 2)
     points_ref_subset = select_query_indices_randomly(
-        points_ref.shape[0], points_ref.shape[0] // 10
+        points_ref.shape[0], points_ref.shape[0] // 2
     )
     timer("Time spent selecting the key points")
 
@@ -134,6 +135,7 @@ if __name__ == "__main__":
     )
 
     if args.matching_algorithm == "simple":
+        print("Matching descriptors using simple matching to closest neighbor.")
         matches_fpfh = basic_matching(fpfh, fpfh_ref)
         timer("Time spent finding matches between the FPFH descriptors")
 
@@ -157,17 +159,33 @@ if __name__ == "__main__":
                 points_ref[points_ref_subset][matches_shot],
             ),
         )
-    elif args.matching_algorithm == "double":
-        rms_fpfh, (rotation, translation) = ransac_matching(fpfh, fpfh_ref)
+    elif args.matching_algorithm == "ransac":
+        print("Matching descriptors using ransac-type matching.")
+        rms_fpfh, (rotation, translation) = ransac_matching(
+            fpfh,
+            points,
+            points[points_subset],
+            fpfh_ref,
+            points_ref,
+            points_ref[points_ref_subset],
+        )
         timer("Time spent finding matches between the FPFH descriptors")
         points_aligned_fpfh = points.dot(rotation.T) + translation
         timer()
 
-        rms_shot, (rotation, translation) = ransac_matching(shot, shot_ref)
+        rms_shot, (rotation, translation) = ransac_matching(
+            shot,
+            points,
+            points[points_subset],
+            shot_ref,
+            points_ref,
+            points_ref[points_ref_subset],
+        )
         timer("Time spent finding matches between the SHOT descriptors")
         points_aligned_shot = points.dot(rotation.T) + translation
         timer()
-    elif args.matching_algorithm == "ransac":
+    elif args.matching_algorithm == "double":
+        print("Matching descriptors using double matching with rejects.")
         matches_fpfh, matches_fpfh_ref = double_matching_with_rejects(
             fpfh, fpfh_ref, args.reject_threshold
         )
@@ -181,6 +199,7 @@ if __name__ == "__main__":
                 points_ref[points_ref_subset][matches_fpfh_ref],
             ),
         )
+        timer()
 
         matches_shot, matches_shot_ref = double_matching_with_rejects(
             shot, shot_ref, args.reject_threshold
@@ -195,20 +214,51 @@ if __name__ == "__main__":
                 points_ref[points_ref_subset][matches_shot_ref],
             ),
         )
+        timer()
     else:
         raise ValueError("Incorrect matching algorithm selection.")
 
     print(f"RMS error with FPFH: {rms_fpfh:.2f}.")
     print(f"RMS error with SHOT: {rms_shot:.2f}.")
 
+    points_aligned_fpfh_icp, has_fpfh_converged = icp_point_to_point(
+        points_aligned_fpfh, points_ref
+    )
+    points_aligned_shot_icp, has_shot_converged = icp_point_to_point(
+        points_aligned_shot, points_ref
+    )
+
+    print(
+        f"The ICP starting from the registration obtained by matching"
+        f" FPFH descriptors has{'' if has_fpfh_converged else ' not'} converged."
+    )
+    print(
+        f"The ICP starting from the registration obtained by matching"
+        f" SHOT descriptors has{'' if has_shot_converged else ' not'} converged."
+    )
+
     if not args.disable_ply_writing:
+        if not os.path.isdir("./data/results"):
+            os.mkdir("./data/results")
+
+        file_name = args.file_path.split("/")[-1].replace(".ply", "")
         write_ply(
-            f"./data/bunny_registered_fpfh-{args.matching_algorithm}.ply",
+            f"./data/results/{file_name}_registered_fpfh-{args.matching_algorithm}.ply",
             [points_aligned_fpfh],
             ["x", "y", "z"],
         )
         write_ply(
-            f"./data/bunny_registered_shot-{args.matching_algorithm}.ply",
+            f"./data/results/{file_name}_registered_shot-{args.matching_algorithm}.ply",
             [points_aligned_shot],
+            ["x", "y", "z"],
+        )
+        write_ply(
+            f"./data/results/{file_name}_registered_fpfh_icp-{args.matching_algorithm}.ply",
+            [points_aligned_fpfh_icp],
+            ["x", "y", "z"],
+        )
+        write_ply(
+            f"./data/results/{file_name}_registered_shot_icp-{args.matching_algorithm}.ply",
+            [points_aligned_shot_icp],
             ["x", "y", "z"],
         )
