@@ -6,6 +6,7 @@ from typing import Tuple
 
 import numpy as np
 from sklearn.neighbors import KDTree
+from tqdm import trange
 
 from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
 
@@ -13,7 +14,7 @@ from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
 def icp_point_to_point(
     data: np.ndarray,
     ref: np.ndarray,
-    max_iter: int = 1000,
+    max_iter: int = 500,
     rms_threshold: float = 0.1,
     sampling_limit: int = 10,
 ) -> Tuple[np.ndarray, float, bool]:
@@ -38,7 +39,7 @@ def icp_point_to_point(
 
     rms = 0.0
 
-    for i in range(max_iter):
+    for _ in trange(max_iter, desc="ICP", delay=1):
         indexes = np.random.choice(data.shape[0], sampling_limit, replace=False)
         data_aligned_subset = data_aligned[indexes]
         neighbors = kdtree.query(data_aligned_subset, return_distance=False).squeeze()

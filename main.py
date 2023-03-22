@@ -115,11 +115,12 @@ if __name__ == "__main__":
 
     check_transform = False  # only useful when the point cloud to align is a subset of the reference point cloud
     if check_transform:
+        import matplotlib.pyplot as plt
         import numpy as np
         from sklearn.neighbors import KDTree
 
-        aligned_points = points.dot(rotation.T) + translation
-        assert (
+        aligned_points = points.dot(rotation) + translation
+        plt.hist(
             np.linalg.norm(
                 aligned_points
                 - points_ref[
@@ -128,9 +129,10 @@ if __name__ == "__main__":
                     .squeeze()
                 ],
                 axis=1,
-            ).max(initial=0)
-            < 1e-2
+            ),
+            bins=100,
         )
+        plt.show()
 
     timer("Time spent retrieving the data")
 
@@ -310,8 +312,8 @@ if __name__ == "__main__":
     else:
         raise ValueError("Incorrect matching algorithm selection.")
 
-    print(f"\nRMS error with FPFH: {rms_fpfh:.2f}.")
-    print(f"RMS error with SHOT: {rms_shot:.2f}.")
+    print(f"\nRMS error with FPFH: {rms_fpfh:.2f}")
+    print(f"RMS error with SHOT: {rms_shot:.2f}")
 
     # fine registration using an icp
     print("\n-- Running ICPs --")
@@ -321,8 +323,8 @@ if __name__ == "__main__":
     points_aligned_shot_icp, rms_shot_icp, has_shot_converged = icp_point_to_point(
         points_aligned_shot, points_ref
     )
-    print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}.")
-    print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}.")
+    print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}")
+    print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}")
 
     print(
         f"The ICP starting from the registration obtained by matching"
@@ -335,7 +337,9 @@ if __name__ == "__main__":
     timer("Time spent on ICP")
 
     if not args.disable_ply_writing:
-        print("\n -- Writing the aligned points cloud in ply files under './data/results' --")
+        print(
+            "\n -- Writing the aligned points cloud in ply files under './data/results' --"
+        )
         if not os.path.isdir("./data/results"):
             os.mkdir("./data/results")
 

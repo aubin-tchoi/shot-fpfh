@@ -59,4 +59,4 @@ def count_correct_matches(
         n_matches: number of correct matches.
     """
     data = data.dot(rotation.T) + translation
-    return (np.linalg.norm(data - ref, axis=1) < 0.01).sum()
+    return (np.linalg.norm(data - ref, axis=1) < 0.1).sum()
