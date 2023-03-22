@@ -1,3 +1,8 @@
+from .count_matches import (
+    get_resulting_transform,
+    read_conf_file,
+    count_correct_matches,
+)
 from .descriptors import (
     compute_pca_based_basic_features,
     compute_pca_based_features,
@@ -13,4 +18,4 @@ from .query_points_selection import (
     select_query_points,
     select_query_indices_randomly,
 )
-from .utils import best_rigid_transform, compute_rigid_transform_error
+from .rigid_transform import best_rigid_transform, compute_rigid_transform_error

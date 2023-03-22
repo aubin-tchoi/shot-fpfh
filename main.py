@@ -1,6 +1,6 @@
 import argparse
-import warnings
 import os
+import warnings
 
 # noinspection PyUnresolvedReferences
 from src import (
@@ -11,7 +11,6 @@ from src import (
     compute_rigid_transform_error,
     # query points sampling
     select_query_points,
-    select_query_points_randomly,
     select_query_indices_randomly,
     # descriptors
     compute_shot_descriptor,
@@ -22,6 +21,9 @@ from src import (
     double_matching_with_rejects,
     ransac_matching,
     icp_point_to_point,
+    get_resulting_transform,
+    read_conf_file,
+    count_correct_matches,
 )
 
 warnings.filterwarnings("ignore")
@@ -46,6 +48,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="./data/bunny_original.ply",
         help="Path to the second point cloud to use (reference point cloud)",
+    )
+    parser.add_argument(
+        "--conf_file_path",
+        type=str,
+        default="./data/bunny/bun.conf",
+        help="Path to the .conf file used to count correct matches. Leave empty to ignore",
     )
     parser.add_argument(
         "--disable_ply_writing",
@@ -93,17 +101,48 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
 
+    global_timer = checkpoint()
     timer = checkpoint()
     points, normals = get_data(args.file_path)
     points_ref, normals_ref = get_data(args.ref_file_path)
+
+    rotation, translation = None, None
+    if args.conf_file_path != "":
+        conf = read_conf_file(args.conf_file_path)
+        rotation, translation = get_resulting_transform(
+            args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
+        )
+
+    check_transform = False  # only useful when the point cloud to align is a subset of the reference point cloud
+    if check_transform:
+        import numpy as np
+        from sklearn.neighbors import KDTree
+
+        aligned_points = points.dot(rotation.T) + translation
+        assert (
+            np.linalg.norm(
+                aligned_points
+                - points_ref[
+                    KDTree(points_ref)
+                    .query(aligned_points, return_distance=False)
+                    .squeeze()
+                ],
+                axis=1,
+            ).max(initial=0)
+            < 1e-2
+        )
+
     timer("Time spent retrieving the data")
 
-    points_subset = select_query_indices_randomly(points.shape[0], points.shape[0] // 2)
+    points_subset = select_query_indices_randomly(
+        points.shape[0], points.shape[0] // 10
+    )
     points_ref_subset = select_query_indices_randomly(
-        points_ref.shape[0], points_ref.shape[0] // 2
+        points_ref.shape[0], points_ref.shape[0] // 10
     )
     timer("Time spent selecting the key points")
 
+    print("\nComputing the descriptors")
     fpfh = compute_fpfh_descriptor(
         points_subset,
         points,
@@ -134,10 +173,26 @@ if __name__ == "__main__":
         f"Time spent computing the descriptors on the reference point cloud ({points_ref.shape[0]} points)"
     )
 
+    # matching
     if args.matching_algorithm == "simple":
-        print("Matching descriptors using simple matching to closest neighbor.")
+        print("\nMatching descriptors using simple matching to closest neighbor.")
         matches_fpfh = basic_matching(fpfh, fpfh_ref)
         timer("Time spent finding matches between the FPFH descriptors")
+
+        # validation
+        assert (
+            matches_fpfh.shape[0] == fpfh.shape[0]
+        ), "Not as many matches as FPFH descriptors"
+        if args.conf_file_path != "":
+            n_correct_matches_fpfh = count_correct_matches(
+                points[points_subset],
+                points_ref[points_ref_subset][matches_fpfh],
+                rotation,
+                translation,
+            )
+            print(
+                f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
+            )
 
         rms_fpfh, points_aligned_fpfh = compute_rigid_transform_error(
             points,
@@ -147,9 +202,23 @@ if __name__ == "__main__":
                 points_ref[points_ref_subset][matches_fpfh],
             ),
         )
+        timer()
 
         matches_shot = basic_matching(shot, shot_ref)
         timer("Time spent finding matches between the SHOT descriptors")
+        assert (
+            matches_shot.shape[0] == shot.shape[0]
+        ), "Not as many matches as SHOT descriptors"
+        if args.conf_file_path != "":
+            n_correct_matches_shot = count_correct_matches(
+                points[points_subset],
+                points_ref[points_ref_subset][matches_shot],
+                rotation,
+                translation,
+            )
+            print(
+                f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
+            )
 
         rms_shot, points_aligned_shot = compute_rigid_transform_error(
             points,
@@ -159,37 +228,24 @@ if __name__ == "__main__":
                 points_ref[points_ref_subset][matches_shot],
             ),
         )
-    elif args.matching_algorithm == "ransac":
-        print("Matching descriptors using ransac-type matching.")
-        rms_fpfh, (rotation, translation) = ransac_matching(
-            fpfh,
-            points,
-            points[points_subset],
-            fpfh_ref,
-            points_ref,
-            points_ref[points_ref_subset],
-        )
-        timer("Time spent finding matches between the FPFH descriptors")
-        points_aligned_fpfh = points.dot(rotation.T) + translation
-        timer()
-
-        rms_shot, (rotation, translation) = ransac_matching(
-            shot,
-            points,
-            points[points_subset],
-            shot_ref,
-            points_ref,
-            points_ref[points_ref_subset],
-        )
-        timer("Time spent finding matches between the SHOT descriptors")
-        points_aligned_shot = points.dot(rotation.T) + translation
         timer()
     elif args.matching_algorithm == "double":
-        print("Matching descriptors using double matching with rejects.")
+        print("\nMatching descriptors using double matching with rejects.")
         matches_fpfh, matches_fpfh_ref = double_matching_with_rejects(
             fpfh, fpfh_ref, args.reject_threshold
         )
         timer("Time spent finding matches between the FPFH descriptors")
+
+        if args.conf_file_path != "":
+            n_correct_matches_fpfh = count_correct_matches(
+                points[points_subset][matches_fpfh],
+                points_ref[points_ref_subset][matches_fpfh_ref],
+                rotation,
+                translation,
+            )
+            print(
+                f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
+            )
 
         rms_fpfh, points_aligned_fpfh = compute_rigid_transform_error(
             points,
@@ -206,6 +262,17 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the SHOT descriptors")
 
+        if args.conf_file_path != "":
+            n_correct_matches_shot = count_correct_matches(
+                points[points_subset][matches_shot],
+                points_ref[points_ref_subset][matches_shot_ref],
+                rotation,
+                translation,
+            )
+            print(
+                f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
+            )
+
         rms_shot, points_aligned_shot = compute_rigid_transform_error(
             points,
             points_ref,
@@ -215,12 +282,38 @@ if __name__ == "__main__":
             ),
         )
         timer()
+    elif args.matching_algorithm == "ransac":
+        print("\nMatching descriptors using ransac-like matching.")
+        rms_fpfh, (rotation_fpfh, translation_fpfh) = ransac_matching(
+            fpfh,
+            points,
+            points[points_subset],
+            fpfh_ref,
+            points_ref,
+            points_ref[points_ref_subset],
+        )
+        timer("Time spent finding matches between the FPFH descriptors")
+        points_aligned_fpfh = points.dot(rotation_fpfh.T) + translation_fpfh
+        timer()
+
+        rms_shot, (rotation_shot, translation_shot) = ransac_matching(
+            shot,
+            points,
+            points[points_subset],
+            shot_ref,
+            points_ref,
+            points_ref[points_ref_subset],
+        )
+        timer("Time spent finding matches between the SHOT descriptors")
+        points_aligned_shot = points.dot(rotation_shot.T) + translation_shot
+        timer()
     else:
         raise ValueError("Incorrect matching algorithm selection.")
 
-    print(f"RMS error with FPFH: {rms_fpfh:.2f}.")
+    print(f"\nRMS error with FPFH: {rms_fpfh:.2f}.")
     print(f"RMS error with SHOT: {rms_shot:.2f}.")
 
+    # fine registration using an icp
     points_aligned_fpfh_icp, has_fpfh_converged = icp_point_to_point(
         points_aligned_fpfh, points_ref
     )
@@ -229,15 +322,17 @@ if __name__ == "__main__":
     )
 
     print(
-        f"The ICP starting from the registration obtained by matching"
+        f"\nThe ICP starting from the registration obtained by matching"
         f" FPFH descriptors has{'' if has_fpfh_converged else ' not'} converged."
     )
     print(
         f"The ICP starting from the registration obtained by matching"
         f" SHOT descriptors has{'' if has_shot_converged else ' not'} converged."
     )
+    timer("Time spent on ICP")
 
     if not args.disable_ply_writing:
+        print("\nWriting the aligned points cloud in ply files under './data/results'")
         if not os.path.isdir("./data/results"):
             os.mkdir("./data/results")
 
@@ -262,3 +357,5 @@ if __name__ == "__main__":
             [points_aligned_shot_icp],
             ["x", "y", "z"],
         )
+
+    global_timer("\nTotal time spent")
