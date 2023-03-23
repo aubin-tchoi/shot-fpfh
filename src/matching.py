@@ -1,7 +1,7 @@
 from typing import Tuple
 
 import numpy as np
-from scipy.spatial.distance import cdist
+from sklearn.neighbors import KDTree
 
 from .perf_monitoring import timeit
 from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
@@ -22,9 +22,7 @@ def basic_matching(descriptors: np.ndarray, ref_descriptors: np.ndarray) -> np.n
     Returns:
         Indices of the matches established.
     """
-    distances = cdist(descriptors, ref_descriptors)
-
-    return distances.argmin(axis=1)
+    return KDTree(ref_descriptors).query(descriptors, return_distance=False)
 
 
 @timeit
@@ -50,15 +48,8 @@ def double_matching_with_rejects(
         matches_indices: Indices of the matches established in the initial array.
         matches_indices_ref: Indices of the matches established in the reference array.
     """
-    distances = cdist(
-        descriptors,
-        ref_descriptors,
-    )
-
-    nearest_neighbor_indices = np.argsort(distances, axis=1)[:, :2]
-
-    neighbors_distances = np.take_along_axis(
-        distances, nearest_neighbor_indices, axis=1
+    neighbors_distances, neighbors_indices = KDTree(ref_descriptors).query(
+        descriptors, 2
     )
     mask = (
         np.divide(
@@ -73,7 +64,7 @@ def double_matching_with_rejects(
     if verbose:
         print(f"Kept {mask.sum()} matches out of {descriptors.shape[0]} descriptors.")
 
-    return mask.nonzero()[0], nearest_neighbor_indices[mask, 0]
+    return mask.nonzero()[0], neighbors_indices[mask, 0]
 
 
 @timeit
@@ -94,8 +85,7 @@ def ransac_matching(
     Returns:
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
-    distances = cdist(descriptors, ref_descriptors)
-    matches = distances.argmin(axis=1)
+    matches = KDTree(ref_descriptors).query(descriptors, return_distance=False)
 
     best_rms: float | None = None
     best_transform: Tuple[np.ndarray, np.ndarray] | None = None

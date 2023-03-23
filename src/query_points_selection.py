@@ -23,7 +23,7 @@ def select_query_points_iteratively(points: np.ndarray, radius: float) -> np.nda
     while not visited.all():
         point_idx = (~visited).nonzero()[0][0]
         selected[point_idx] = True
-        visited[kdtree.query_radius(points[point_idx], radius)] = True
+        visited[kdtree.query_radius([points[point_idx]], radius)[0]] = True
 
     return selected.nonzero()[0]
 
