@@ -1,6 +1,7 @@
 import argparse
 import os
 import warnings
+import gc
 
 from src import (
     get_data,
@@ -192,6 +193,7 @@ if __name__ == "__main__":
     timer(
         f"Time spent computing the descriptors on the reference point cloud ({points_ref.shape[0]} points)"
     )
+    gc.collect()
 
     # matching
     if args.matching_algorithm == "simple":
@@ -329,6 +331,7 @@ if __name__ == "__main__":
         timer()
     else:
         raise ValueError("Incorrect matching algorithm selection.")
+    gc.collect()
 
     print(f"\nRMS error with FPFH: {rms_fpfh:.2f}")
     print(f"RMS error with SHOT: {rms_shot:.2f}")
