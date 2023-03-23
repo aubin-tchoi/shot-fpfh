@@ -18,7 +18,6 @@ def compute_fpfh_descriptor(
     cloud_points: np.ndarray,
     normals: np.ndarray,
     radius: float,
-    k: int,
     n_bins: int,
 ) -> np.ndarray:
     kdtree = KDTree(cloud_points)
@@ -34,10 +33,10 @@ def compute_fpfh_descriptor(
         centered_neighbors = neighbors - point
         distances = np.linalg.norm(centered_neighbors, axis=1)
         u = normals[i]
-        v = np.cross(u, centered_neighbors / distances[:, None])
+        v = np.cross(centered_neighbors, u)
         w = np.cross(u, v)
         alpha = np.einsum("ij,ij->i", v, neighbors_normals)
-        phi = (centered_neighbors / distances[:, None]).dot(u)
+        phi = centered_neighbors.dot(u) / distances
         theta = np.arctan2(
             np.einsum("ij,ij->i", neighbors_normals, w), neighbors_normals.dot(u)
         )
@@ -50,12 +49,19 @@ def compute_fpfh_descriptor(
             / neighborhoods[i].shape[0]
         )
 
-    distances, neighborhoods = kdtree.query(
-        cloud_points[query_points_indices], k + 1
+    neighborhoods, distances = kdtree.query_radius(
+        cloud_points[query_points_indices],
+        radius,
+        return_distance=True,
     )
-    fpfh = (
-        spfh[query_points_indices]
-        + (spfh[neighborhoods[:, 1:]] / distances[:, 1:, None, None, None]).sum(axis=1) / k
-    )
+    fpfh = np.zeros((query_points_indices.shape[0], n_bins, n_bins, n_bins))
+    for i, neighborhood in enumerate(neighborhoods):
+        fpfh[i] = (
+            spfh[query_points_indices[i]]
+            + (spfh[neighborhood] / distances[i][:, None, None, None])[
+                distances[i] > 0
+            ].sum(axis=0)
+            / neighborhood.shape[0]
+        )
 
     return fpfh.reshape(query_points_indices.shape[0], -1)

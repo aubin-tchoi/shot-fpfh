@@ -80,12 +80,6 @@ def parse_args() -> argparse.Namespace:
         help="Radius in the neighborhood search when computing SPFH.",
     )
     parser.add_argument(
-        "--fpfh_k",
-        type=int,
-        default=12,
-        help="Number of neighbors in the neighborhood search when computing FPFH.",
-    )
-    parser.add_argument(
         "--fpfh_n_bins", type=int, default=5, help="Number of bins in FPFH."
     )
     parser.add_argument(
@@ -176,7 +170,6 @@ if __name__ == "__main__":
         points,
         normals,
         radius=args.fpfh_radius,
-        k=args.fpfh_k,
         n_bins=args.fpfh_n_bins,
     )
     shot = compute_shot_descriptor(
@@ -191,7 +184,6 @@ if __name__ == "__main__":
         points_ref,
         normals_ref,
         radius=args.fpfh_radius,
-        k=args.fpfh_k,
         n_bins=args.fpfh_n_bins,
     )
     shot_ref = compute_shot_descriptor(
