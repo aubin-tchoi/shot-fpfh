@@ -1,7 +1,7 @@
 import argparse
+import gc
 import os
 import warnings
-import gc
 
 from src import (
     get_data,
@@ -24,6 +24,7 @@ from src import (
     get_resulting_transform,
     read_conf_file,
     count_correct_matches,
+    plot_distance_hists,
 )
 
 warnings.filterwarnings("ignore")
@@ -140,10 +141,10 @@ if __name__ == "__main__":
     if args.query_points_selection == "random":
         print("\n-- Selecting query points randomly --")
         points_subset = select_query_indices_randomly(
-            points.shape[0], points.shape[0] // 10
+            points.shape[0], points.shape[0] // 1
         )
         points_ref_subset = select_query_indices_randomly(
-            points_ref.shape[0], points_ref.shape[0] // 10
+            points_ref.shape[0], points_ref.shape[0] // 1
         )
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
@@ -154,7 +155,9 @@ if __name__ == "__main__":
             points_ref.shape[0], args.shot_radius / 50
         )
     elif args.query_points_selection == "subsampling":
-        print("\n-- Selecting query points based on a subsampling on the point cloud --")
+        print(
+            "\n-- Selecting query points based on a subsampling on the point cloud --"
+        )
         points_subset = select_query_points_subsampling(
             points.shape[0], args.shot_radius / 50
         )
@@ -266,7 +269,15 @@ if __name__ == "__main__":
                 translation,
             )
             print(
-                f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
+                f"FPFH: {n_correct_matches_fpfh} correct matches out of {matches_fpfh.shape[0]} matches."
+            )
+            plot_distance_hists(
+                points[points_subset],
+                points_ref[points_ref_subset],
+                rotation,
+                translation,
+                fpfh,
+                fpfh_ref,
             )
 
         rms_fpfh, points_aligned_fpfh = compute_rigid_transform_error(
@@ -292,7 +303,15 @@ if __name__ == "__main__":
                 translation,
             )
             print(
-                f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
+                f"SHOT: {n_correct_matches_shot} correct matches out of {matches_shot.shape[0]} matches."
+            )
+            plot_distance_hists(
+                points[points_subset],
+                points_ref[points_ref_subset],
+                rotation,
+                translation,
+                shot,
+                shot_ref,
             )
 
         rms_shot, points_aligned_shot = compute_rigid_transform_error(
@@ -316,6 +335,13 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the FPFH descriptors")
         points_aligned_fpfh = points.dot(rotation_fpfh.T) + translation_fpfh
+        if args.conf_file_path != "":
+            print(
+                f"Norm of the angle between the two rotations: "
+                f"{np.abs(np.arccos((np.trace(rotation_fpfh @ rotation.T) - 1) / 2)):.2f}\n"
+                f"Norm of the difference between the two translation: "
+                f"{np.linalg.norm(translation_fpfh - translation):.2f}"
+            )
         timer()
 
         rms_shot, (rotation_shot, translation_shot) = ransac_matching(
@@ -328,6 +354,13 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the SHOT descriptors")
         points_aligned_shot = points.dot(rotation_shot.T) + translation_shot
+        if args.conf_file_path != "":
+            print(
+                f"Norm of the angle between the two rotations: "
+                f"{np.abs(np.arccos((np.trace(rotation_shot @ rotation.T) - 1) / 2)):.2f}\n"
+                f"Norm of the difference between the two translation: "
+                f"{np.linalg.norm(translation_shot - translation):.2f}"
+            )
         timer()
     else:
         raise ValueError("Incorrect matching algorithm selection.")

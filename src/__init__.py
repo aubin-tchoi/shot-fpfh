@@ -2,6 +2,7 @@ from .count_matches import (
     get_resulting_transform,
     read_conf_file,
     count_correct_matches,
+    plot_distance_hists,
 )
 from .descriptors import (
     compute_pca_based_basic_features,
