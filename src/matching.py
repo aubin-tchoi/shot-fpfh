@@ -67,7 +67,7 @@ def double_matching_with_rejects(
             out=np.ones(descriptors.shape[0]),
             where=neighbors_distances[:, 1] != 0,
         )
-        <= threshold
+        >= threshold
     )
 
     if verbose:

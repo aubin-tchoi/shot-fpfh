@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.neighbors import KDTree
 
+from .subsampling import grid_subsampling
+
 # setting a seed
 rng = np.random.default_rng(seed=1)
 
@@ -32,8 +34,11 @@ def select_query_points_subsampling(
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
     Operates by subsampling the point cloud and taking the points closest to the barycenter of each voxel is kept.
+
+    Returns:
+        selected: array of the indices of the selected points.
     """
-    pass
+    return grid_subsampling(points, voxel_size)
 
 
 def select_query_points_randomly(

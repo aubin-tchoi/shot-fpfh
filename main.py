@@ -115,7 +115,7 @@ if __name__ == "__main__":
             args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
         )
 
-    check_transform = False  # only useful when the point cloud to align is a subset of the reference point cloud
+    check_transform = False  # describes the covering between the two point clouds
     if check_transform:
         import matplotlib.pyplot as plt
         import numpy as np
@@ -149,20 +149,20 @@ if __name__ == "__main__":
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
         points_subset = select_query_points_iteratively(
-            points.shape[0], args.shot_radius / 50
+            points, args.shot_radius / 50
         )
         points_ref_subset = select_query_points_iteratively(
-            points_ref.shape[0], args.shot_radius / 50
+            points_ref, args.shot_radius / 50
         )
     elif args.query_points_selection == "subsampling":
         print(
             "\n-- Selecting query points based on a subsampling on the point cloud --"
         )
         points_subset = select_query_points_subsampling(
-            points.shape[0], args.shot_radius / 50
+            points, args.shot_radius / 50
         )
         points_ref_subset = select_query_points_subsampling(
-            points_ref.shape[0], args.shot_radius / 50
+            points_ref, args.shot_radius / 50
         )
     else:
         raise ValueError("Incorrect query points selection algorithm.")
