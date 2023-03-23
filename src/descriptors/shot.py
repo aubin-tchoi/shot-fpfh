@@ -18,11 +18,10 @@ def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.
     """
     Extracts a local reference frame based on the eigendecomposition of the weighted covariance matrix.
     """
-    barycenter = neighbors.mean(axis=0)
-    centered_points = neighbors - barycenter
+    centered_points = neighbors - point
 
     # EVD of the weighted covariance matrix
-    radius_minus_distances = radius - np.linalg.norm(neighbors - point, axis=1)
+    radius_minus_distances = radius - np.linalg.norm(centered_points, axis=1)
     weighted_cov_matrix = centered_points.T @ (
         centered_points * radius_minus_distances[:, None]
     ) / radius_minus_distances.sum()
@@ -39,7 +38,7 @@ def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.
         eigenvectors[:, 0] *= -1
     eigenvectors[:, 1] = np.cross(eigenvectors[:, 2], eigenvectors[:, 0])
 
-    return eigenvectors
+    return eigenvectors[::-1]
 
 
 def get_azimuth_idx(x: float | np.ndarray, y: float | np.ndarray) -> int:
