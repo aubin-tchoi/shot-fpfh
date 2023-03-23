@@ -18,6 +18,9 @@ def get_local_rf(point: np.ndarray, neighbors: np.ndarray, radius: float) -> np.
     """
     Extracts a local reference frame based on the eigendecomposition of the weighted covariance matrix.
     """
+    if neighbors.shape[0] == 0:
+        return np.eye(3)
+
     centered_points = neighbors - point
 
     # EVD of the weighted covariance matrix
@@ -189,12 +192,14 @@ def compute_shot_descriptor(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)
         )
         neighbors = cloud_points[neighborhoods[i]]
+        distances = np.linalg.norm(neighbors - point, axis=1)
+        neighbors = neighbors[distances > 0]
         eigenvectors = get_local_rf(point, neighbors, radius)
         local_coordinates = (neighbors - point) @ eigenvectors
-        cosine = np.clip(normals[neighborhoods[i]] @ eigenvectors[:, 2].T, -1, 1)
+        cosine = np.clip(normals[neighborhoods[i]][distances > 0] @ eigenvectors[:, 2].T, -1, 1)
+        distances = distances[distances > 0]
 
         # computing the spherical coordinates in the local coordinate system
-        distances = np.linalg.norm(neighbors - point, axis=1)
         theta = np.arctan2(local_coordinates[:, 1], local_coordinates[:, 0])
         phi = np.arccos(np.clip(local_coordinates[:, 2] / distances, -1, 1))
 
@@ -210,12 +215,13 @@ def compute_shot_descriptor(
         bin_dist -= bin_idx  # normalized distance with the neighbor bin
         dist_sign = np.sign(bin_dist)  # left-neighbor or right-neighbor
         abs_bin_dist = dist_sign * bin_dist  # probably faster than np.abs
+        # noinspection PyRedundantParentheses
         descriptor[
             (bin_idx + dist_sign).astype(int) % n_cosine_bins,
             azimuth_idx,
             elevation_idx,
             radial_idx,
-        ] += abs_bin_dist * ((bin_idx > -0.5) & (bin_idx < n_cosine_bins - 0.5))
+        ] += abs_bin_dist * (((bin_idx > -0.5) & (bin_idx < n_cosine_bins - 0.5)))
         descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += 1 - abs_bin_dist
 
         # interpolation on the adjacent husks

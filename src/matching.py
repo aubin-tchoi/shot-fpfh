@@ -60,7 +60,15 @@ def double_matching_with_rejects(
     neighbors_distances = np.take_along_axis(
         distances, nearest_neighbor_indices, axis=1
     )
-    mask = neighbors_distances[:, 0] / neighbors_distances[:, 1] >= threshold
+    mask = (
+        np.divide(
+            neighbors_distances[:, 0],
+            neighbors_distances[:, 1],
+            out=np.ones(descriptors.shape[0]),
+            where=neighbors_distances[:, 1] != 0,
+        )
+        <= threshold
+    )
 
     if verbose:
         print(f"Kept {mask.sum()} matches out of {descriptors.shape[0]} descriptors.")
