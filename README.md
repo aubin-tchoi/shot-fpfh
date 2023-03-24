@@ -1,4 +1,4 @@
-# SHOT / FPFH descriptors on 3D Point Clouds
+# 🌐 SHOT / 📊 FPFH descriptors on 3D Point Clouds
 
 This repository contains resources to compute SHOT and FPFH, two 3D descriptors on point clouds.
 The main script `main.py` contains a pipeline consisting of the following steps:
