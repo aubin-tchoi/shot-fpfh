@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "shot-fpfh"
-version = "0.1.0"
-description = ""
+version = "1.0.0"
+description = "Implementation of SHOT and FPFH, two 3D descriptors that can be used for point clouds registration."
 authors = ["aubin-tchoi <aubin.tchoi@gmail.com>"]
 readme = "README.md"
 packages = [{include = "shot_fpfh"}]
@@ -12,7 +12,7 @@ numpy = "^1.24.2"
 scikit-learn = "^1.2.2"
 matplotlib = "^3.7.1"
 tqdm = "^4.65.0"
-
+fonttools = "^4.39.0"
 
 [build-system]
 requires = ["poetry-core"]
