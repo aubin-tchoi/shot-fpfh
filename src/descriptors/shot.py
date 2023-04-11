@@ -267,6 +267,6 @@ def compute_shot_descriptor(
         descriptor[bin_idx, azimuth_idx, elevation_idx, radial_idx] += 1 - abs_bin_dist
 
         # normalizing the descriptor to Euclidian norm 1
-        all_descriptors[i] = (descriptor / np.linalg.norm(descriptor)).ravel()
+        all_descriptors[i] = (descriptor / (np.linalg.norm(descriptor) or 1)).ravel()
 
     return all_descriptors

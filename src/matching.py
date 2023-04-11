@@ -93,8 +93,8 @@ def ransac_matching(
     for _ in range(n_draws):
         draws = rng.choice(matches, draw_size, replace=False, shuffle=False)
         rotation, translation = best_rigid_transform(
-            point_cloud_subset[draws],
-            ref_point_cloud_subset[draws],
+            point_cloud_subset[draws.squeeze()],
+            ref_point_cloud_subset[draws.squeeze()],
         )
         rms = compute_rigid_transform_error(
             point_cloud_whole, ref_point_cloud_whole, rotation, translation
