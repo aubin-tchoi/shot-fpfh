@@ -35,6 +35,16 @@ def pca(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     )
 
 
+@timeit
+def compute_normals(
+    query_points: np.ndarray, cloud_points: np.ndarray, radius: float
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Computes PCA-based normals on a point cloud.
+    """
+    return compute_local_pca(query_points, cloud_points, radius=radius)[1][:, :, 0]
+
+
 def compute_local_pca(
     query_points: np.ndarray,
     cloud_points: np.ndarray,

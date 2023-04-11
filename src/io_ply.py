@@ -5,6 +5,7 @@ import sys
 from typing import Tuple
 
 import numpy as np
+from src.descriptors import compute_normals
 
 # defining PLY types
 ply_dtypes = dict(
@@ -244,11 +245,16 @@ def describe_element(name, df):
     return element
 
 
-def get_data(data_path: str, remove_duplicates: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+def get_data(
+    data_path: str, remove_duplicates: bool = False, radius: float | None = None
+) -> Tuple[np.ndarray, np.ndarray]:
     data = read_ply(data_path)
 
     points = np.vstack((data["x"], data["y"], data["z"])).T
-    normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+    if "nx" in data.dtype.fields.keys():
+        normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+    else:
+        normals = compute_normals(points, points, radius)
 
     if remove_duplicates:
         filtered_indexes = np.unique(points.round(decimals=4), axis=0, return_index=True)[1]

@@ -105,15 +105,18 @@ if __name__ == "__main__":
 
     global_timer = checkpoint()
     timer = checkpoint()
-    points, normals = get_data(args.file_path)
-    points_ref, normals_ref = get_data(args.ref_file_path)
+    points, normals = get_data(args.file_path, radius=args.fpfh_radius)
+    points_ref, normals_ref = get_data(args.ref_file_path, radius=args.fpfh_radius)
 
     rotation, translation = None, None
     if args.conf_file_path != "":
-        conf = read_conf_file(args.conf_file_path)
-        rotation, translation = get_resulting_transform(
-            args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
-        )
+        try:
+            conf = read_conf_file(args.conf_file_path)
+            rotation, translation = get_resulting_transform(
+                args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
+            )
+        except FileNotFoundError:
+            print(f"Conf file not found under {args.conf_file_path}, ignoring it.")
 
     check_transform = False  # describes the covering between the two point clouds
     if check_transform:
@@ -148,9 +151,7 @@ if __name__ == "__main__":
         )
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
-        points_subset = select_query_points_iteratively(
-            points, args.shot_radius / 50
-        )
+        points_subset = select_query_points_iteratively(points, args.shot_radius / 50)
         points_ref_subset = select_query_points_iteratively(
             points_ref, args.shot_radius / 50
         )
@@ -158,9 +159,7 @@ if __name__ == "__main__":
         print(
             "\n-- Selecting query points based on a subsampling on the point cloud --"
         )
-        points_subset = select_query_points_subsampling(
-            points, args.shot_radius / 50
-        )
+        points_subset = select_query_points_subsampling(points, args.shot_radius / 50)
         points_ref_subset = select_query_points_subsampling(
             points_ref, args.shot_radius / 50
         )
