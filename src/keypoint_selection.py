@@ -61,3 +61,95 @@ def select_query_indices_randomly(
     Selects a random subset of the points to create a set of key points on which descriptors will be computed.
     """
     return np.random.choice(n_points, n_feature_points, replace=False)
+
+
+def select_keypoints_with_density_threshold(
+    points: np.ndarray[np.float64],
+    voxel_size: float,
+    density_threshold_value: int,
+    density_threshold_radius: Optional[float] = None,
+) -> np.ndarray[np.int32]:
+    """
+    Selects a subset of the points to create a set of key points on which descriptors will be computed.
+    Operates by subsampling the point cloud and keeping the points closest to the barycenter of each voxel whose density
+    exceeds a certain value.
+
+    Returns:
+        selected keypoints: array containing the indices of the selected points.
+    """
+    non_empty_voxel_keys, inverse, nb_pts_per_voxel = np.unique(
+        ((points - np.min(points, axis=0)) // voxel_size).astype(int),
+        axis=0,
+        return_inverse=True,
+        return_counts=True,
+    )
+    if density_threshold_radius is None:
+        density_threshold_radius = voxel_size
+
+    idx_pts_vox_sorted = np.argsort(inverse)
+    sub_sampled_points_idx = []
+    kdtree = None
+    if density_threshold_radius != voxel_size:
+        kdtree = KDTree(points)
+
+    last_seen = 0
+    for idx in range(len(non_empty_voxel_keys)):
+        indexes_in_voxel = idx_pts_vox_sorted[
+            last_seen : last_seen + nb_pts_per_voxel[idx]
+        ]
+        # point closest to the barycenter
+        point_closest_to_centroid = indexes_in_voxel[
+            np.linalg.norm(
+                points[indexes_in_voxel] - points[indexes_in_voxel].mean(axis=0),
+                axis=1,
+            ).argmin()
+        ]
+        if (
+            voxel_size == density_threshold_radius
+            and nb_pts_per_voxel[idx] > density_threshold_value
+        ) or (
+            voxel_size != density_threshold_radius
+            and (
+                kdtree.query_radius(
+                    [points[point_closest_to_centroid]], density_threshold_radius
+                )[0].shape[0]
+                > density_threshold_value
+            )
+        ):
+            sub_sampled_points_idx.append(point_closest_to_centroid)
+
+        last_seen += nb_pts_per_voxel[idx]
+
+    return np.array(sub_sampled_points_idx)
+
+
+def filter_keypoints(
+    keypoints: np.ndarray[np.int32],
+    normals: np.ndarray[np.float64],
+    normals_z_threshold: float = 0.8,
+    sphericity: Optional[np.ndarray[np.float64]] = None,
+    sphericity_threshold: float = 0.16,
+    verbose: bool = True,
+) -> np.ndarray[np.int32]:
+    """
+    Filters keypoints found on the ground based on the value of the z-coordinate of their normals.
+    """
+    if sphericity is not None and sphericity.shape[0] == normals.shape[0]:
+        mask = (np.abs(normals[keypoints, 2]) < normals_z_threshold) & (
+            sphericity < sphericity_threshold
+        )
+        if verbose:
+            print(f"Filtering keypoints based on sphericity and normals ", end="")
+    elif sphericity is not None and sphericity.shape[0] == keypoints.shape[0]:
+        mask = (np.abs(normals[keypoints, 2]) < normals_z_threshold) & (
+            sphericity < sphericity_threshold
+        )
+        if verbose:
+            print(f"Filtering keypoints based on sphericity and normals ", end="")
+    else:
+        mask = normals[keypoints, 2] < normals_z_threshold
+        if verbose:
+            print(f"Filtering keypoints based on normals only ", end="")
+    if verbose:
+        print(f"({mask.sum()} keypoints out of {keypoints.shape[0]}).")
+    return keypoints[mask]
