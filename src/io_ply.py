@@ -2,7 +2,7 @@
 Utility functions to read/write .ply files
 """
 import sys
-from typing import Tuple
+from typing import Tuple, Optional, Protocol
 
 import numpy as np
 
@@ -12,7 +12,6 @@ ply_dtypes = dict(
         (b"int8", "i1"),
         (b"char", "i1"),
         (b"uint8", "u1"),
-        (b"uchar", "b1"),
         (b"uchar", "u1"),
         (b"int16", "i2"),
         (b"short", "i2"),
@@ -34,7 +33,6 @@ valid_formats = {"ascii": "", "binary_big_endian": ">", "binary_little_endian": 
 
 
 def parse_header(plyfile, ext):
-
     # Variables
     line = []
     properties = []
@@ -85,17 +83,16 @@ def read_ply(filename) -> np.ndarray:
     """
 
     with open(filename, "rb") as plyfile:
-
-        # Check if the file start with ply
+        # check if the file starts with ply
         if b"ply" not in plyfile.readline():
-            raise ValueError("The file does not start whith the word ply")
+            raise ValueError("The file does not start with the word ply")
 
         # get binary_little/big or ascii
         fmt = plyfile.readline().split()[1].decode()
         if fmt == "ascii":
             raise ValueError("The file is not binary")
 
-        # get extension for building the numpy dtypes
+        # get the extension for building the numpy dtypes
         ext = valid_formats[fmt]
 
         # Parse header
@@ -108,7 +105,6 @@ def read_ply(filename) -> np.ndarray:
 
 
 def header_properties(field_list, field_names):
-
     # first line describing element vertex
     lines = ["element vertex %d" % field_list[0].shape[0]]
 
@@ -128,13 +124,13 @@ def write_ply(filename, field_list, field_names):
 
     Args:
         filename (str): the name of the file to which the data is saved. A '.ply' extension will be appended to the
-            file name if it does no already have one.
+            file name if it does not already have one.
 
         field_list ([list, tuple, np.ndarray]): the fields to be saved in the ply file. Either a numpy array, a list of
             numpy arrays or a tuple of numpy arrays. Each 1D numpy array and each column of 2D numpy arrays are
             considered.
 
-        field_names (list[str]): the name of each field. Has to be the same length as field_list.
+        field_names (list[str]): the name of each field. It has to be the same length as field_list.
 
     Examples:
         >>> points = np.random.rand(10, 3)
@@ -170,19 +166,18 @@ def write_ply(filename, field_list, field_names):
         print("wrong field dimensions")
         return False
 
-    # Check if field_names and field_list have same nb of column
+    # check if field_names and field_list have the same number of columns
     n_fields = np.sum([field.shape[1] for field in field_list])
     if n_fields != len(field_names):
         print("wrong number of field names")
         return False
 
-    # Add extension if not there
+    # add the extension if not there
     if not filename.endswith(".ply"):
         filename += ".ply"
 
     # open in text mode to write the header
     with open(filename, "w") as plyfile:
-
         # first magical word and encoding format
         header = ["ply", "format binary_" + sys.byteorder + "_endian 1.0"]
 
@@ -196,9 +191,8 @@ def write_ply(filename, field_list, field_names):
         for line in header:
             plyfile.write("%s\n" % line)
 
-    # open in binary/append to use tofile
+    # open in binary/append to use to file
     with open(filename, "ab") as plyfile:
-
         # Create a structured array
         i = 0
         type_list = []
@@ -237,21 +231,66 @@ def describe_element(name, df):
 
     else:
         for i in range(len(df.columns)):
-            # get first letter of dtype to infer format
+            # get the first letter of the data type to infer format
             f = property_formats[str(df.dtypes[i])[0]]
             element.append("property " + f + " " + df.columns.values[i])
 
     return element
 
 
-def get_data(data_path: str, remove_duplicates: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+class NormalsComputationCallback(Protocol):
+    """
+    Type signature for callbacks that can compute normals on a point cloud.
+    """
+
+    def __call__(
+        self,
+        query_points: np.ndarray[np.float64],
+        cloud_points: np.ndarray[np.float64],
+        *,
+        k: Optional[int] = None,
+        radius: Optional[float] = None,
+        pre_computed_normals: Optional[np.ndarray[np.float64]] = None,
+    ) -> np.ndarray[np.float64]:
+        ...
+
+
+def get_data(
+    data_path: str,
+    remove_duplicates: bool = False,
+    recompute_normals: bool = True,
+    k: Optional[int] = None,
+    radius: Optional[float] = None,
+    compute_normals: Optional[NormalsComputationCallback] = None,
+) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     data = read_ply(data_path)
 
     points = np.vstack((data["x"], data["y"], data["z"])).T
-    normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+    if "nx" in data.dtype.fields.keys():
+        normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
+        if recompute_normals:
+            print(f"Recomputing normals using function {compute_normals.__name__}")
+            normals = compute_normals(
+                points, points, k=k, radius=radius, pre_computed_normals=normals
+            )
+    elif "n_x" in data.dtype.fields.keys():
+        normals = np.vstack((data["n_x"], data["n_y"], data["n_z"])).T
+        if recompute_normals:
+            print(f"Recomputing normals using function {compute_normals.__name__}")
+            normals = compute_normals(
+                points, points, k=k, radius=radius, pre_computed_normals=normals
+            )
+    else:
+        if compute_normals is None:
+            raise ValueError(
+                "The function used to compute normals needs to be specified as the ply file does not contain normals."
+            )
+        normals = compute_normals(points, points, k=k, radius=radius)
 
     if remove_duplicates:
-        filtered_indexes = np.unique(points.round(decimals=4), axis=0, return_index=True)[1]
+        filtered_indexes = np.unique(
+            points.round(decimals=4), axis=0, return_index=True
+        )[1]
         return points[filtered_indexes], normals[filtered_indexes]
 
     return points, normals
