@@ -3,24 +3,19 @@ from typing import Tuple
 import numpy as np
 from sklearn.neighbors import KDTree
 
+from .transformation import Transformation
 
-def best_rigid_transform(
-    data: np.ndarray, ref: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+
+def solver_point_to_point(
+    scan: np.ndarray[np.float64], ref: np.ndarray[np.float64]
+) -> Transformation:
     """
     Computes the least-squares best-fit transform that maps corresponding points data to ref.
-    Inputs :
-        data = (N x d) matrix where "N" is the number of points and "d" the dimension
-         ref = (N x d) matrix where "N" is the number of points and "d" the dimension
-    Returns :
-           R = (d x d) rotation matrix
-           T = (d x 1) translation vector
-           Such that R * data + T is aligned on ref
     """
 
-    data_barycenter = data.mean(axis=0)
+    data_barycenter = scan.mean(axis=0)
     ref_barycenter = ref.mean(axis=0)
-    covariance_matrix = (data - data_barycenter).T.dot(ref - ref_barycenter)
+    covariance_matrix = (scan - data_barycenter).T.dot(ref - ref_barycenter)
     u, sigma, v = np.linalg.svd(covariance_matrix)
     rotation = v.T @ u.T
 
@@ -32,27 +27,24 @@ def best_rigid_transform(
 
     translation = ref_barycenter - rotation.dot(data_barycenter)
 
-    return rotation, translation
+    return Transformation(rotation, translation)
 
 
-def compute_rigid_transform_error(
-    data: np.ndarray,
-    reference: np.ndarray,
-    rotation: np.ndarray,
-    translation: np.ndarray,
-) -> Tuple[float, np.ndarray]:
+def compute_point_to_point_error(
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    transformation: Transformation,
+) -> Tuple[float, np.ndarray[np.float64]]:
     """
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.
     """
-    transformed_data = data.dot(rotation.T) + translation
-    neighbors = (
-        KDTree(reference).query(transformed_data, return_distance=False).squeeze()
-    )
+    transformed_data = transformation.transform(scan)
+    neighbors = KDTree(ref).query(transformed_data, return_distance=False).squeeze()
     return (
         np.sqrt(
             np.sum(
-                (transformed_data - reference[neighbors]) ** 2,
+                (transformed_data - ref[neighbors]) ** 2,
                 axis=0,
             ).mean()
         ),

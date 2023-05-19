@@ -7,8 +7,8 @@ from src import (
     get_data,
     write_ply,
     checkpoint,
-    best_rigid_transform,
-    compute_rigid_transform_error,
+    solver_point_to_point,
+    compute_point_to_point_error,
     # query points sampling
     select_query_indices_randomly,
     select_keypoints_iteratively,
@@ -20,7 +20,7 @@ from src import (
     basic_matching,
     double_matching_with_rejects,
     ransac_matching,
-    icp_point_to_point,
+    icp_point_to_point_with_sampling,
     get_resulting_transform,
     read_conf_file,
     count_correct_matches,
@@ -96,6 +96,12 @@ def parse_args() -> argparse.Namespace:
         default=0.8,
         help="Threshold in the double matching algorithm.",
     )
+    parser.add_argument(
+        "--icp_d_max",
+        type=float,
+        default=1e-2,
+        help="Maximum distance between two inliers in the ICP.",
+    )
 
     return parser.parse_args()
 
@@ -148,9 +154,7 @@ if __name__ == "__main__":
         )
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
-        points_subset = select_keypoints_iteratively(
-            points, args.shot_radius / 50
-        )
+        points_subset = select_keypoints_iteratively(points, args.shot_radius / 50)
         points_ref_subset = select_keypoints_iteratively(
             points_ref, args.shot_radius / 50
         )
@@ -158,9 +162,7 @@ if __name__ == "__main__":
         print(
             "\n-- Selecting query points based on a subsampling on the point cloud --"
         )
-        points_subset = select_keypoints_subsampling(
-            points, args.shot_radius / 50
-        )
+        points_subset = select_keypoints_subsampling(points, args.shot_radius / 50)
         points_ref_subset = select_keypoints_subsampling(
             points_ref, args.shot_radius / 50
         )
@@ -219,10 +221,10 @@ if __name__ == "__main__":
                 f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
             )
 
-        rms_fpfh, points_aligned_fpfh = compute_rigid_transform_error(
+        rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
             points,
             points_ref,
-            *best_rigid_transform(
+            solver_point_to_point(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_fpfh],
             ),
@@ -245,10 +247,10 @@ if __name__ == "__main__":
                 f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
             )
 
-        rms_shot, points_aligned_shot = compute_rigid_transform_error(
+        rms_shot, points_aligned_shot = compute_point_to_point_error(
             points,
             points_ref,
-            *best_rigid_transform(
+            solver_point_to_point(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_shot],
             ),
@@ -280,10 +282,10 @@ if __name__ == "__main__":
                 fpfh_ref,
             )
 
-        rms_fpfh, points_aligned_fpfh = compute_rigid_transform_error(
+        rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
             points,
             points_ref,
-            *best_rigid_transform(
+            solver_point_to_point(
                 points[points_subset][matches_fpfh],
                 points_ref[points_ref_subset][matches_fpfh_ref],
             ),
@@ -314,10 +316,10 @@ if __name__ == "__main__":
                 shot_ref,
             )
 
-        rms_shot, points_aligned_shot = compute_rigid_transform_error(
+        rms_shot, points_aligned_shot = compute_point_to_point_error(
             points,
             points_ref,
-            *best_rigid_transform(
+            solver_point_to_point(
                 points[points_subset][matches_shot],
                 points_ref[points_ref_subset][matches_shot_ref],
             ),
@@ -325,7 +327,7 @@ if __name__ == "__main__":
         timer()
     elif args.matching_algorithm == "ransac":
         print("\n -- Matching descriptors using ransac-like matching --")
-        rms_fpfh, (rotation_fpfh, translation_fpfh) = ransac_matching(
+        rms_fpfh, transformation_fpfh = ransac_matching(
             fpfh,
             points,
             points[points_subset],
@@ -334,17 +336,17 @@ if __name__ == "__main__":
             points_ref[points_ref_subset],
         )
         timer("Time spent finding matches between the FPFH descriptors")
-        points_aligned_fpfh = points.dot(rotation_fpfh.T) + translation_fpfh
+        points_aligned_fpfh = transformation_fpfh[points]
         if args.conf_file_path != "":
             print(
                 f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(rotation_fpfh @ rotation.T) - 1) / 2)):.2f}\n"
+                f"{np.abs(np.arccos((np.trace(transformation_fpfh.rotation @ rotation.T) - 1) / 2)):.2f}\n"
                 f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(translation_fpfh - translation):.2f}"
+                f"{np.linalg.norm(transformation_fpfh.translation - translation):.2f}"
             )
         timer()
 
-        rms_shot, (rotation_shot, translation_shot) = ransac_matching(
+        rms_shot, transformation_shot = ransac_matching(
             shot,
             points,
             points[points_subset],
@@ -353,13 +355,13 @@ if __name__ == "__main__":
             points_ref[points_ref_subset],
         )
         timer("Time spent finding matches between the SHOT descriptors")
-        points_aligned_shot = points.dot(rotation_shot.T) + translation_shot
+        points_aligned_shot = transformation_shot[points]
         if args.conf_file_path != "":
             print(
                 f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(rotation_shot @ rotation.T) - 1) / 2)):.2f}\n"
+                f"{np.abs(np.arccos((np.trace(transformation_shot.rotation @ rotation.T) - 1) / 2)):.2f}\n"
                 f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(translation_shot - translation):.2f}"
+                f"{np.linalg.norm(transformation_shot.translation - translation):.2f}"
             )
         timer()
     else:
@@ -371,11 +373,19 @@ if __name__ == "__main__":
 
     # fine registration using an icp
     print("\n-- Running ICPs --")
-    points_aligned_fpfh_icp, rms_fpfh_icp, has_fpfh_converged = icp_point_to_point(
-        points_aligned_fpfh, points_ref
+    (
+        points_aligned_fpfh_icp,
+        rms_fpfh_icp,
+        has_fpfh_converged,
+    ) = icp_point_to_point_with_sampling(
+        points_aligned_fpfh, points_ref, args.icp_d_max
     )
-    points_aligned_shot_icp, rms_shot_icp, has_shot_converged = icp_point_to_point(
-        points_aligned_shot, points_ref
+    (
+        points_aligned_shot_icp,
+        rms_shot_icp,
+        has_shot_converged,
+    ) = icp_point_to_point_with_sampling(
+        points_aligned_shot, points_ref, args.icp_d_max
     )
     print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}")
     print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}")

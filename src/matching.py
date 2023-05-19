@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from typing import Tuple
 
 import numpy as np
 from sklearn.neighbors import KDTree
 
 from .perf_monitoring import timeit
-from .rigid_transform import best_rigid_transform, compute_rigid_transform_error
-
+from .rigid_transform import solver_point_to_point, compute_point_to_point_error
+from .transformation import Transformation
 # setting a seed
 rng = np.random.default_rng(seed=1)
 
@@ -77,7 +79,7 @@ def ransac_matching(
     ref_point_cloud_subset: np.ndarray,
     n_draws: int = 100,
     draw_size: int = 4,
-) -> Tuple[float, Tuple[np.ndarray, np.ndarray]]:
+) -> Tuple[float, Transformation]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
@@ -88,19 +90,19 @@ def ransac_matching(
     matches = KDTree(ref_descriptors).query(descriptors, return_distance=False)
 
     best_rms: float | None = None
-    best_transform: Tuple[np.ndarray, np.ndarray] | None = None
+    best_transform: Transformation | None = None
 
     for _ in range(n_draws):
         draws = rng.choice(matches, draw_size, replace=False, shuffle=False)
-        rotation, translation = best_rigid_transform(
+        transformation = solver_point_to_point(
             point_cloud_subset[draws],
             ref_point_cloud_subset[draws],
         )
-        rms = compute_rigid_transform_error(
-            point_cloud_whole, ref_point_cloud_whole, rotation, translation
+        rms = compute_point_to_point_error(
+            point_cloud_whole, ref_point_cloud_whole, transformation
         )[0]
         if best_rms is None or rms < best_rms:
             best_rms = rms
-            best_transform = (rotation, translation)
+            best_transform = transformation
 
     return best_rms, best_transform

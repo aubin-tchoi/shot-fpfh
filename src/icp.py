@@ -8,62 +8,72 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from .rigid_transform import best_rigid_transform
+from .rigid_transform import solver_point_to_point
 
 
-def icp_point_to_point(
-    data: np.ndarray,
-    ref: np.ndarray,
-    max_iter: int = 10000,
-    rms_threshold: float = 0.01,
+def icp_point_to_point_with_sampling(
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    d_max: float,
+    max_iter: int = 100,
+    rms_threshold: float = 1e-2,
     sampling_limit: int = 100,
-) -> Tuple[np.ndarray, float, bool]:
+    disable_progress_bar: bool = False,
+) -> Tuple[np.ndarray[np.float64], float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
-    Each iteration is performed on a subsampled of the point clouds to fasten the computation.
+    Each iteration is performed on a subsampling of the point clouds to fasten the computation.
 
     Args:
-        data: (N_data x d) matrix where "N_data" is the number of points and "d" the dimension
+        scan: (N_points x d) matrix where "N_points" is the number of points and "d" the dimension
         ref: (N_ref x d) matrix where "N_ref" is the number of points and "d" the dimension
+        d_max: Maximum distance between two points to consider the match as an inlier.
         max_iter: stop condition on the number of iterations
         rms_threshold: stop condition on the distance
         sampling_limit: number of points used at each iteration.
+        disable_progress_bar: disables the progress bar.
 
     Returns:
-        data_aligned: data aligned on reference cloud.
+        points_aligned: points aligned on reference cloud.
         rms: the RMS error.
         has_converged: boolean value indicating whether the method has converged or not.
     """
-    data_aligned = np.copy(data)
+    points_aligned = np.copy(scan)
     kdtree = KDTree(ref)
-    sampling_limit = min(sampling_limit, data.shape[0])
+    sampling_limit = min(sampling_limit, scan.shape[0])
 
     rms = 0.0
 
-    for _ in trange(max_iter, desc="ICP", delay=1):
+    for _ in (
+        pbar := trange(max_iter, desc="ICP", delay=1, disable=disable_progress_bar)
+    ):
         # this loop can be stopped preemptively by a CTRL+C
         try:
-            indexes = np.random.choice(data.shape[0], sampling_limit, replace=False)
-            data_aligned_subset = data_aligned[indexes]
-            neighbors = kdtree.query(data_aligned_subset, return_distance=False).squeeze()
-            rotation, translation = best_rigid_transform(
-                data_aligned_subset,
+            indexes = np.random.choice(scan.shape[0], sampling_limit, replace=False)
+            points_aligned_subset = points_aligned[indexes]
+            distances, neighbors = kdtree.query(points_aligned_subset)
+            # keeping the inlier only
+            inlier_points = points_aligned_subset[distances.squeeze() <= d_max]
+            neighbors = neighbors[distances <= d_max]
+            transformation = solver_point_to_point(
+                inlier_points,
                 ref[neighbors],
             )
             rms = np.sqrt(
                 np.sum(
-                    (data_aligned_subset - ref[neighbors]) ** 2,
+                    np.linalg.norm(inlier_points - ref[neighbors], axis=1) ** 2,
                     axis=0,
-                ).mean()
+                )
             )
-            data_aligned = data_aligned.dot(rotation.T) + translation
+            pbar.set_description(f"ICP - current RMS: {rms:.2f}")
+            points_aligned = transformation.transform(points_aligned)
             if rms < rms_threshold:
                 break
         except KeyboardInterrupt:
             print("ICP interrupted by user.")
             break
 
-    return data_aligned, rms, rms < rms_threshold
+    return points_aligned, rms, rms < rms_threshold
 
 
 def icp_point_to_plane(

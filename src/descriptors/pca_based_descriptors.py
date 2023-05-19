@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.neighbors import KDTree
 
-from utils import timeit
+from ..perf_monitoring import timeit
 
 
 def pca(
