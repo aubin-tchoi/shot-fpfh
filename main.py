@@ -11,8 +11,8 @@ from src import (
     compute_rigid_transform_error,
     # query points sampling
     select_query_indices_randomly,
-    select_query_points_iteratively,
-    select_query_points_subsampling,
+    select_keypoints_iteratively,
+    select_keypoints_subsampling,
     # descriptors
     compute_shot_descriptor,
     compute_fpfh_descriptor,
@@ -148,20 +148,20 @@ if __name__ == "__main__":
         )
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
-        points_subset = select_query_points_iteratively(
+        points_subset = select_keypoints_iteratively(
             points, args.shot_radius / 50
         )
-        points_ref_subset = select_query_points_iteratively(
+        points_ref_subset = select_keypoints_iteratively(
             points_ref, args.shot_radius / 50
         )
     elif args.query_points_selection == "subsampling":
         print(
             "\n-- Selecting query points based on a subsampling on the point cloud --"
         )
-        points_subset = select_query_points_subsampling(
+        points_subset = select_keypoints_subsampling(
             points, args.shot_radius / 50
         )
-        points_ref_subset = select_query_points_subsampling(
+        points_ref_subset = select_keypoints_subsampling(
             points_ref, args.shot_radius / 50
         )
     else:

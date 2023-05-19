@@ -7,7 +7,7 @@ from .subsampling import grid_subsampling
 rng = np.random.default_rng(seed=1)
 
 
-def select_query_points_iteratively(points: np.ndarray, radius: float) -> np.ndarray:
+def select_keypoints_iteratively(points: np.ndarray, radius: float) -> np.ndarray:
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
     Operates by selecting a point randomly, counting its spherical neighbors as visited,
@@ -28,7 +28,7 @@ def select_query_points_iteratively(points: np.ndarray, radius: float) -> np.nda
     return selected.nonzero()[0]
 
 
-def select_query_points_subsampling(
+def select_keypoints_subsampling(
     points: np.ndarray, voxel_size: float
 ) -> np.ndarray:
     """
@@ -41,7 +41,7 @@ def select_query_points_subsampling(
     return grid_subsampling(points, voxel_size)
 
 
-def select_query_points_randomly(
+def select_keypoints_randomly(
     points: np.ndarray, n_feature_points: int
 ) -> np.ndarray:
     """
