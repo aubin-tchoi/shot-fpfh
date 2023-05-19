@@ -4,10 +4,10 @@ from typing import Tuple
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from sklearn.neighbors import KDTree
+from tqdm import tqdm
 
 from .perf_monitoring import timeit
-from .rigid_transform import solver_point_to_point, compute_point_to_point_error
+from .rigid_transform import solver_point_to_point
 from .transformation import Transformation
 
 # setting a seed
@@ -95,39 +95,69 @@ def double_matching_with_rejects(
 
 
 @timeit
-def ransac_matching(
-    descriptors: np.ndarray,
-    point_cloud_whole: np.ndarray,
-    point_cloud_subset: np.ndarray,
-    ref_descriptors: np.ndarray,
-    ref_point_cloud_whole: np.ndarray,
-    ref_point_cloud_subset: np.ndarray,
-    n_draws: int = 100,
+def ransac_on_matches(
+    scan_descriptors_indices: np.ndarray[np.int32],
+    ref_descriptors_indices: np.ndarray[np.int32],
+    scan_keypoints: np.ndarray[np.float64],
+    ref_keypoints: np.ndarray[np.float64],
+    n_draws: int = 10000,
     draw_size: int = 4,
+    distance_threshold: float = 1,
+    verbose: bool = False,
+    disable_progress_bar: bool = False,
 ) -> Tuple[float, Transformation]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
+    Only works if the biggest cluster of consistent matches (matches that can all be laid on top of one another by a
+    common rigid transform) contains good matches.
 
     Returns:
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
-    matches = KDTree(ref_descriptors).query(descriptors, return_distance=False)
-
-    best_rms: float | None = None
+    best_n_inliers: int | None = None
     best_transform: Transformation | None = None
 
-    for _ in range(n_draws):
-        draws = rng.choice(matches, draw_size, replace=False, shuffle=False)
-        transformation = solver_point_to_point(
-            point_cloud_subset[draws],
-            ref_point_cloud_subset[draws],
+    for _ in (
+        pbar := tqdm(
+            range(n_draws),
+            desc="RANSAC",
+            total=n_draws,
+            disable=disable_progress_bar,
+            delay=0.5,
         )
-        rms = compute_point_to_point_error(
-            point_cloud_whole, ref_point_cloud_whole, transformation
-        )[0]
-        if best_rms is None or rms < best_rms:
-            best_rms = rms
-            best_transform = transformation
+    ):
+        try:
+            draw = rng.choice(
+                scan_descriptors_indices.shape[0],
+                draw_size,
+                replace=False,
+                shuffle=False,
+            )
+            transformation = solver_point_to_point(
+                scan_keypoints[scan_descriptors_indices[draw]],
+                ref_keypoints[ref_descriptors_indices[draw]],
+            )
+            n_inliers = (
+                np.linalg.norm(
+                    transformation.transform(scan_keypoints[scan_descriptors_indices])
+                    - ref_keypoints[ref_descriptors_indices],
+                    axis=1,
+                )
+                <= distance_threshold
+            ).sum()
+            if best_n_inliers is None or n_inliers > best_n_inliers:
+                if verbose:
+                    print(
+                        f"Updating best n_inliers from {best_n_inliers} to {n_inliers}"
+                    )
+                best_n_inliers = n_inliers
+                best_transform = transformation
+            pbar.set_description(f"RANSAC - current best n_inliers: {best_n_inliers}")
+        except KeyboardInterrupt:
+            print("RANSAC interrupted by user.")
+            break
 
-    return best_rms, best_transform
+    best_transform.normalize_rotation()
+
+    return best_n_inliers / scan_descriptors_indices.shape[0], best_transform

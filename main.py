@@ -19,7 +19,7 @@ from src import (
     # matching algorithms
     basic_matching,
     double_matching_with_rejects,
-    ransac_matching,
+    ransac_on_matches,
     icp_point_to_point_with_sampling,
     get_resulting_transform,
     read_conf_file,
@@ -114,10 +114,10 @@ if __name__ == "__main__":
     points, normals = get_data(args.file_path)
     points_ref, normals_ref = get_data(args.ref_file_path)
 
-    rotation, translation = None, None
+    exact_transformation = None
     if args.conf_file_path != "":
         conf = read_conf_file(args.conf_file_path)
-        rotation, translation = get_resulting_transform(
+        exact_transformation = get_resulting_transform(
             args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
         )
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         import numpy as np
         from sklearn.neighbors import KDTree
 
-        aligned_points = points.dot(rotation) + translation
+        aligned_points = exact_transformation[points]
         plt.hist(
             np.linalg.norm(
                 aligned_points
@@ -214,8 +214,7 @@ if __name__ == "__main__":
             n_correct_matches_fpfh = count_correct_matches(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_fpfh],
-                rotation,
-                translation,
+                exact_transformation,
             )
             print(
                 f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
@@ -240,8 +239,7 @@ if __name__ == "__main__":
             n_correct_matches_shot = count_correct_matches(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_shot],
-                rotation,
-                translation,
+                exact_transformation,
             )
             print(
                 f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
@@ -267,8 +265,7 @@ if __name__ == "__main__":
             n_correct_matches_fpfh = count_correct_matches(
                 points[points_subset][matches_fpfh],
                 points_ref[points_ref_subset][matches_fpfh_ref],
-                rotation,
-                translation,
+                exact_transformation,
             )
             print(
                 f"FPFH: {n_correct_matches_fpfh} correct matches out of {matches_fpfh.shape[0]} matches."
@@ -276,8 +273,7 @@ if __name__ == "__main__":
             plot_distance_hists(
                 points[points_subset],
                 points_ref[points_ref_subset],
-                rotation,
-                translation,
+                exact_transformation,
                 fpfh,
                 fpfh_ref,
             )
@@ -301,8 +297,7 @@ if __name__ == "__main__":
             n_correct_matches_shot = count_correct_matches(
                 points[points_subset][matches_shot],
                 points_ref[points_ref_subset][matches_shot_ref],
-                rotation,
-                translation,
+                exact_transformation,
             )
             print(
                 f"SHOT: {n_correct_matches_shot} correct matches out of {matches_shot.shape[0]} matches."
@@ -310,8 +305,7 @@ if __name__ == "__main__":
             plot_distance_hists(
                 points[points_subset],
                 points_ref[points_ref_subset],
-                rotation,
-                translation,
+                exact_transformation,
                 shot,
                 shot_ref,
             )
@@ -327,7 +321,7 @@ if __name__ == "__main__":
         timer()
     elif args.matching_algorithm == "ransac":
         print("\n -- Matching descriptors using ransac-like matching --")
-        rms_fpfh, transformation_fpfh = ransac_matching(
+        rms_fpfh, transformation_fpfh = ransac_on_matches(
             fpfh,
             points,
             points[points_subset],
@@ -338,15 +332,18 @@ if __name__ == "__main__":
         timer("Time spent finding matches between the FPFH descriptors")
         points_aligned_fpfh = transformation_fpfh[points]
         if args.conf_file_path != "":
+            rotation_diff = (
+                transformation_fpfh.rotation @ exact_transformation.rotation.T
+            )
             print(
                 f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(transformation_fpfh.rotation @ rotation.T) - 1) / 2)):.2f}\n"
+                f"{np.abs(np.arccos((np.trace(rotation_diff) - 1) / 2)):.2f}\n"
                 f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(transformation_fpfh.translation - translation):.2f}"
+                f"{np.linalg.norm(transformation_fpfh.translation - exact_transformation.translation):.2f}"
             )
         timer()
 
-        rms_shot, transformation_shot = ransac_matching(
+        rms_shot, transformation_shot = ransac_on_matches(
             shot,
             points,
             points[points_subset],
@@ -357,11 +354,14 @@ if __name__ == "__main__":
         timer("Time spent finding matches between the SHOT descriptors")
         points_aligned_shot = transformation_shot[points]
         if args.conf_file_path != "":
+            rotation_diff = (
+                transformation_shot.rotation @ exact_transformation.rotation.T
+            )
             print(
                 f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(transformation_shot.rotation @ rotation.T) - 1) / 2)):.2f}\n"
+                f"{np.abs(np.arccos((np.trace(rotation_diff) - 1) / 2)):.2f}\n"
                 f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(transformation_shot.translation - translation):.2f}"
+                f"{np.linalg.norm(transformation_shot.translation - exact_transformation.translation):.2f}"
             )
         timer()
     else:
