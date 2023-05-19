@@ -2,9 +2,10 @@
 Utility functions to read/write .ply files
 """
 import sys
-from typing import Tuple, Optional, Protocol
+from typing import Tuple, Protocol
 
 import numpy as np
+from .descriptors import compute_normals
 
 # defining PLY types
 ply_dtypes = dict(
@@ -12,6 +13,7 @@ ply_dtypes = dict(
         (b"int8", "i1"),
         (b"char", "i1"),
         (b"uint8", "u1"),
+        (b"uchar", "b1"),
         (b"uchar", "u1"),
         (b"int16", "i2"),
         (b"short", "i2"),
@@ -248,9 +250,9 @@ class NormalsComputationCallback(Protocol):
         query_points: np.ndarray[np.float64],
         cloud_points: np.ndarray[np.float64],
         *,
-        k: Optional[int] = None,
-        radius: Optional[float] = None,
-        pre_computed_normals: Optional[np.ndarray[np.float64]] = None,
+        k: int | None = None,
+        radius: float | None = None,
+        pre_computed_normals: np.ndarray[np.float64] | None = None,
     ) -> np.ndarray[np.float64]:
         ...
 
@@ -259,9 +261,9 @@ def get_data(
     data_path: str,
     remove_duplicates: bool = False,
     recompute_normals: bool = True,
-    k: Optional[int] = None,
-    radius: Optional[float] = None,
-    compute_normals: Optional[NormalsComputationCallback] = None,
+    k: int | None = None,
+    radius: float | None = None,
+    compute_normals: NormalsComputationCallback = compute_normals,
 ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     data = read_ply(data_path)
 

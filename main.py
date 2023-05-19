@@ -62,6 +62,11 @@ def parse_args() -> argparse.Namespace:
         help="Skips saving the registered point cloud as ply files.",
     )
     parser.add_argument(
+        "--shot_first",
+        action="store_true",
+        help="Computes SHOT first and FPFH second.",
+    )
+    parser.add_argument(
         "--query_points_selection",
         choices=["random", "iterative", "subsampling"],
         type=str,
@@ -111,15 +116,22 @@ if __name__ == "__main__":
 
     global_timer = checkpoint()
     timer = checkpoint()
-    points, normals = get_data(args.file_path)
-    points_ref, normals_ref = get_data(args.ref_file_path)
+    points, normals = get_data(args.file_path, radius=args.fpfh_radius)
+    points_ref, normals_ref = get_data(args.ref_file_path, radius=args.fpfh_radius)
 
     exact_transformation = None
+    use_conf_file = False
     if args.conf_file_path != "":
-        conf = read_conf_file(args.conf_file_path)
-        exact_transformation = get_resulting_transform(
-            args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
-        )
+        try:
+            conf = read_conf_file(args.conf_file_path)
+            exact_transformation = get_resulting_transform(
+                args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
+            )
+            import numpy as np
+
+            use_conf_file = True
+        except FileNotFoundError:
+            print(f"Conf file not found under {args.conf_file_path}, ignoring it.")
 
     check_transform = False  # describes the covering between the two point clouds
     if check_transform:
@@ -171,30 +183,60 @@ if __name__ == "__main__":
     timer("Time spent selecting the key points")
 
     print("\n-- Computing the descriptors --")
-    fpfh = compute_fpfh_descriptor(
-        points_subset,
-        points,
-        normals,
-        radius=args.fpfh_radius,
-        n_bins=args.fpfh_n_bins,
-    )
-    shot = compute_shot_descriptor(
-        points[points_subset], points, normals, radius=args.shot_radius
-    )
+    if args.shot_first:
+        shot = compute_shot_descriptor(
+            points[points_subset], points, normals, radius=args.shot_radius
+        )
+        fpfh = compute_fpfh_descriptor(
+            points_subset,
+            points,
+            normals,
+            radius=args.fpfh_radius,
+            n_bins=args.fpfh_n_bins,
+        )
+    else:
+        fpfh = compute_fpfh_descriptor(
+            points_subset,
+            points,
+            normals,
+            radius=args.fpfh_radius,
+            n_bins=args.fpfh_n_bins,
+        )
+        shot = compute_shot_descriptor(
+            points[points_subset], points, normals, radius=args.shot_radius
+        )
     timer(
         f"Time spent computing the descriptors on the point cloud to align ({points.shape[0]} points)"
     )
 
-    fpfh_ref = compute_fpfh_descriptor(
-        points_ref_subset,
-        points_ref,
-        normals_ref,
-        radius=args.fpfh_radius,
-        n_bins=args.fpfh_n_bins,
-    )
-    shot_ref = compute_shot_descriptor(
-        points_ref[points_ref_subset], points_ref, normals_ref, radius=args.shot_radius
-    )
+    if args.shot_first:
+        shot_ref = compute_shot_descriptor(
+            points_ref[points_ref_subset],
+            points_ref,
+            normals_ref,
+            radius=args.shot_radius,
+        )
+        fpfh_ref = compute_fpfh_descriptor(
+            points_ref_subset,
+            points_ref,
+            normals_ref,
+            radius=args.fpfh_radius,
+            n_bins=args.fpfh_n_bins,
+        )
+    else:
+        fpfh_ref = compute_fpfh_descriptor(
+            points_ref_subset,
+            points_ref,
+            normals_ref,
+            radius=args.fpfh_radius,
+            n_bins=args.fpfh_n_bins,
+        )
+        shot_ref = compute_shot_descriptor(
+            points_ref[points_ref_subset],
+            points_ref,
+            normals_ref,
+            radius=args.shot_radius,
+        )
     timer(
         f"Time spent computing the descriptors on the reference point cloud ({points_ref.shape[0]} points)"
     )
@@ -210,7 +252,7 @@ if __name__ == "__main__":
         assert (
             matches_fpfh.shape[0] == fpfh.shape[0]
         ), "Not as many matches as FPFH descriptors"
-        if args.conf_file_path != "":
+        if use_conf_file:
             n_correct_matches_fpfh = count_correct_matches(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_fpfh],
@@ -235,7 +277,7 @@ if __name__ == "__main__":
         assert (
             matches_shot.shape[0] == shot.shape[0]
         ), "Not as many matches as SHOT descriptors"
-        if args.conf_file_path != "":
+        if use_conf_file:
             n_correct_matches_shot = count_correct_matches(
                 points[points_subset],
                 points_ref[points_ref_subset][matches_shot],
@@ -261,7 +303,7 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the FPFH descriptors")
 
-        if args.conf_file_path != "":
+        if use_conf_file:
             n_correct_matches_fpfh = count_correct_matches(
                 points[points_subset][matches_fpfh],
                 points_ref[points_ref_subset][matches_fpfh_ref],
@@ -293,7 +335,7 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the SHOT descriptors")
 
-        if args.conf_file_path != "":
+        if use_conf_file:
             n_correct_matches_shot = count_correct_matches(
                 points[points_subset][matches_shot],
                 points_ref[points_ref_subset][matches_shot_ref],
@@ -331,7 +373,7 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the FPFH descriptors")
         points_aligned_fpfh = transformation_fpfh[points]
-        if args.conf_file_path != "":
+        if use_conf_file:
             rotation_diff = (
                 transformation_fpfh.rotation @ exact_transformation.rotation.T
             )
@@ -353,7 +395,7 @@ if __name__ == "__main__":
         )
         timer("Time spent finding matches between the SHOT descriptors")
         points_aligned_shot = transformation_shot[points]
-        if args.conf_file_path != "":
+        if use_conf_file:
             rotation_diff = (
                 transformation_shot.rotation @ exact_transformation.rotation.T
             )
