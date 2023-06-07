@@ -180,6 +180,62 @@ class ShotMultiprocessor:
             support=point_cloud[support] if support is not None else point_cloud,
         )
 
+    def compute_descriptor_bi_scale(
+        self,
+        point_cloud: np.ndarray[np.float64],
+        normals: np.ndarray[np.float64],
+        keypoints: np.ndarray[np.float64],
+        local_rf_radius: float,
+        shot_radius: float,
+        subsampling_voxel_size: Optional[float] = None,
+    ) -> np.ndarray[np.float64]:
+        """
+        Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
+        reference frames and the other one for the computation of the descriptor.
+        Normals are expected to be normalized to 1.
+
+        Args:
+            point_cloud: The entire point cloud.
+            normals: The normals computed on the point cloud.
+            keypoints: The keypoints to compute descriptors on.
+            local_rf_radius: Radius used to compute the local reference frames.
+            shot_radius: Radius used to compute the SHOT descriptors.
+            subsampling_voxel_size: Subsampling strength. Leave empty to keep the whole support.
+
+        Returns:
+            The descriptor as a (self.keypoints.shape[0], 352) array.
+        """
+        support = (
+            grid_subsampling(point_cloud, subsampling_voxel_size)
+            if subsampling_voxel_size is not None
+            else None
+        )
+        if self.verbose and support is not None:
+            print(
+                f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
+                f"(voxel size: {subsampling_voxel_size})"
+            )
+        neighborhoods = KDTree(
+            point_cloud[support] if support is not None else point_cloud
+        ).query_radius(keypoints, local_rf_radius)
+        local_rfs = self.compute_local_rf(
+            keypoints=keypoints,
+            neighborhoods=neighborhoods,
+            support=point_cloud[support] if support is not None else point_cloud,
+            radius=local_rf_radius,
+        )
+        neighborhoods = KDTree(point_cloud[support]).query_radius(
+            keypoints, shot_radius
+        )
+        return self.compute_descriptor(
+            keypoints=keypoints,
+            normals=normals[support] if support is not None else normals,
+            neighborhoods=neighborhoods,
+            local_rfs=local_rfs,
+            radius=shot_radius,
+            support=point_cloud[support] if support is not None else point_cloud,
+        )
+
     def compute_descriptor_multiscale(
         self,
         point_cloud: np.ndarray[np.float64],
