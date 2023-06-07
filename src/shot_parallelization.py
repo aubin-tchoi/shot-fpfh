@@ -215,14 +215,16 @@ class ShotMultiprocessor:
             support = (
                 grid_subsampling(point_cloud, voxel_sizes[scale])
                 if voxel_sizes is not None
-                else np.zeros(point_cloud.shape[0], dtype=bool)
+                else None
             )
-            if self.verbose and np.any(support):
+            if self.verbose and support is not None:
                 print(
                     f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
                     f"(voxel size: {voxel_sizes[scale]})"
                 )
-            neighborhoods = KDTree(point_cloud[support]).query_radius(keypoints, radius)
+            neighborhoods = KDTree(
+                point_cloud[support] if support is not None else point_cloud
+            ).query_radius(keypoints, radius)
 
             # if shared, only using the smallest radius to determine the local RF
             if local_rfs is None or not self.share_local_rfs:
