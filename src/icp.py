@@ -8,7 +8,9 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from .rigid_transform import solver_point_to_point
+from .rigid_transform import solver_point_to_point, solver_point_to_plane
+from .transformation import Transformation
+from .subsampling import grid_subsampling
 
 
 def icp_point_to_point_with_sampling(
@@ -76,16 +78,116 @@ def icp_point_to_point_with_sampling(
     return points_aligned, rms, rms < rms_threshold
 
 
+def icp_point_to_point(
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    transformation_init: Transformation,
+    d_max: float,
+    voxel_size: float = 0.2,
+    max_iter: int = 100,
+    rms_threshold: float = 1e-2,
+    disable_progress_bar: bool = False,
+) -> Tuple[Transformation, float, bool]:
+    """
+    Iterative closest point algorithm with a point to point strategy.
+    Each iteration is performed on a subsampling of the point clouds to fasten the computation.
+    """
+    kdtree = KDTree(ref)
+    subsampled_indices = grid_subsampling(scan, voxel_size)
+    transformation_icp = transformation_init
+    rms = 0.0
+
+    for _ in (
+        progress_bar := trange(
+            max_iter, desc="ICP", delay=1, disable=disable_progress_bar
+        )
+    ):
+        # this loop can be stopped preemptively by a CTRL+C
+        try:
+            points_aligned = transformation_icp.transform(scan[subsampled_indices])
+            distances, neighbors = kdtree.query(points_aligned)
+
+            # keeping the inliers only
+            inliers = points_aligned[distances.squeeze() <= d_max]
+            inliers_neighbors = neighbors[distances <= d_max]
+
+            # finding the transformation between the inliers and their neighbors
+            transformation_aligned_to_ref = solver_point_to_point(
+                inliers,
+                ref[inliers_neighbors],
+            )
+            rms = np.sqrt(
+                np.sum(
+                    np.linalg.norm(inliers - ref[neighbors], axis=1) ** 2,
+                    axis=0,
+                )
+            )
+            transformation_icp = transformation_aligned_to_ref @ transformation_icp
+            progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
+            if rms < rms_threshold:
+                print("RMS threshold reached.")
+                break
+        except KeyboardInterrupt:
+            print("ICP interrupted by user.")
+            break
+
+    return transformation_icp, rms, rms < rms_threshold
+
+
 def icp_point_to_plane(
-    points: np.ndarray,
-    normals: np.ndarray,
-    ref: np.ndarray,
-    ref_normals: np.ndarray,
-    max_iter: int,
-    rms_threshold: float,
-) -> np.ndarray:
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    ref_normals: np.ndarray[np.float64],
+    transformation_init: Transformation,
+    d_max: float,
+    voxel_size: float = 0.2,
+    max_iter: int = 50,
+    rms_threshold: float = 1e-2,
+    disable_progress_bar: bool = False,
+) -> Tuple[Transformation, float, bool]:
     """
     Point to plane ICP.
     More robust to point clouds of variable densities where the plane estimations by the normals are good.
     """
-    pass
+    kdtree = KDTree(ref)
+    subsampled_indices = grid_subsampling(scan, voxel_size)
+    transformation_icp = transformation_init
+    rms = 0.0
+
+    for _ in (
+        progress_bar := trange(
+            max_iter, desc="ICP", delay=1, disable=disable_progress_bar
+        )
+    ):
+        # this loop can be stopped preemptively by a CTRL+C
+        try:
+            points_aligned = transformation_icp.transform(scan[subsampled_indices])
+            distances, neighbors = kdtree.query(points_aligned)
+
+            # keeping the inliers only
+            inliers = points_aligned[distances.squeeze() <= d_max]
+            inliers_neighbors = neighbors[distances <= d_max]
+
+            # finding the transformation between the inliers and their neighbors
+            transformation_aligned_to_ref = solver_point_to_plane(
+                inliers,
+                ref[inliers_neighbors],
+                ref_normals[inliers_neighbors],
+            )
+            transformation_icp = transformation_aligned_to_ref @ transformation_icp
+            rms = np.abs(
+                np.einsum(
+                    "ij, ij->i",
+                    inliers - ref[inliers_neighbors],
+                    ref_normals[inliers_neighbors],
+                )
+            ).mean(axis=0)
+            progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
+            if rms < rms_threshold:
+                print("RMS threshold reached.")
+                break
+        except KeyboardInterrupt:
+            print("ICP interrupted by user.")
+            break
+
+    return transformation_icp, rms, rms < rms_threshold

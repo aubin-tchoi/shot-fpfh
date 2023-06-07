@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
 from .transformation import Transformation
@@ -28,6 +29,24 @@ def solver_point_to_point(
     translation = ref_barycenter - rotation.dot(data_barycenter)
 
     return Transformation(rotation, translation)
+
+
+def solver_point_to_plane(
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    normals_ref: np.ndarray[np.float64],
+) -> Transformation:
+    g = np.hstack((np.cross(scan, normals_ref), normals_ref))
+    h = np.einsum(
+        "ij, ij->i",
+        ref - scan,
+        normals_ref,
+    )
+    # np.linalg.solve relies on a Cholesky decomposition when A is a symmetric definite positive matrix
+    solution = np.linalg.solve(g.T @ g, g.T @ h)
+    return Transformation(
+        Rotation.from_euler("xyz", solution[:3]).as_matrix(), solution[3:6]
+    )
 
 
 def compute_point_to_point_error(
