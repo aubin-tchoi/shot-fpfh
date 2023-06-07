@@ -5,7 +5,8 @@ import sys
 from typing import Tuple, Protocol
 
 import numpy as np
-from .descriptors import compute_normals
+
+from descriptors import compute_normals
 
 # defining PLY types
 ply_dtypes = dict(
@@ -13,7 +14,6 @@ ply_dtypes = dict(
         (b"int8", "i1"),
         (b"char", "i1"),
         (b"uint8", "u1"),
-        (b"uchar", "b1"),
         (b"uchar", "u1"),
         (b"int16", "i2"),
         (b"short", "i2"),
