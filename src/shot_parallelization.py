@@ -179,3 +179,74 @@ class ShotMultiprocessor:
             radius=radius,
             support=point_cloud[support] if support is not None else point_cloud,
         )
+
+    def compute_descriptor_multiscale(
+        self,
+        point_cloud: np.ndarray[np.float64],
+        normals: np.ndarray[np.float64],
+        keypoints: np.ndarray[np.float64],
+        radii: Union[List[float], np.ndarray[np.float64]],
+        voxel_sizes: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
+        weights: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
+    ) -> np.ndarray[np.float64]:
+        """
+        Computes the SHOT descriptor on multiple scales.
+        Normals are expected to be normalized to 1.
+
+        Args:
+            point_cloud: The entire point cloud.
+            normals: The normals computed on the point cloud.
+            keypoints: The keypoints to compute descriptors on.
+            radii: The radii to compute the descriptors with.
+            voxel_sizes: The voxel sizes used to subsample the support. Leave empty to keep the whole support.
+            weights: The weights to multiply each scale with. Leave empty to multiply by 1.
+
+        Returns:
+            The descriptor as a (self.keypoints.shape[0], 352 * n_scales) array.
+        """
+        if weights is None:
+            weights = np.ones(len(radii))
+
+        all_descriptors = np.zeros((len(radii), keypoints.shape[0], 352))
+
+        local_rfs = None
+        for scale, radius in enumerate(radii):
+            # choosing the support point cloud
+            support = (
+                grid_subsampling(point_cloud, voxel_sizes[scale])
+                if voxel_sizes is not None
+                else np.zeros(point_cloud.shape[0], dtype=bool)
+            )
+            if self.verbose and np.any(support):
+                print(
+                    f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
+                    f"(voxel size: {voxel_sizes[scale]})"
+                )
+            neighborhoods = KDTree(point_cloud[support]).query_radius(keypoints, radius)
+
+            # if shared, only using the smallest radius to determine the local RF
+            if local_rfs is None or not self.share_local_rfs:
+                # recomputing the local rfs if not shared
+                local_rfs = self.compute_local_rf(
+                    keypoints=keypoints,
+                    neighborhoods=neighborhoods,
+                    support=point_cloud[support]
+                    if support is not None
+                    else point_cloud,
+                    radius=radius,
+                )
+            all_descriptors[scale, :, :] = (
+                self.compute_descriptor(
+                    keypoints=keypoints,
+                    normals=normals[support] if support is not None else normals,
+                    neighborhoods=neighborhoods,
+                    local_rfs=local_rfs,
+                    radius=radius,
+                    support=point_cloud[support]
+                    if support is not None
+                    else point_cloud,
+                )
+                * weights[scale]
+            )
+
+        return all_descriptors.reshape(keypoints.shape[0], 352 * len(radii))
