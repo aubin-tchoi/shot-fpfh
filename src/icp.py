@@ -8,9 +8,12 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from .rigid_transform import solver_point_to_point, solver_point_to_plane
-from .transformation import Transformation
-from .subsampling import grid_subsampling
+from base_computation import (
+    solver_point_to_point,
+    solver_point_to_plane,
+    Transformation,
+    grid_subsampling,
+)
 
 
 def icp_point_to_point_with_sampling(

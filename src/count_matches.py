@@ -5,7 +5,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
-from .transformation import Transformation
+from base_computation import Transformation
 
 
 def quaternion_to_rotation_matrix(

@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 from sklearn.neighbors import KDTree
 
-from .subsampling import grid_subsampling
+from base_computation import grid_subsampling
 
 # setting a seed
 rng = np.random.default_rng(seed=1)

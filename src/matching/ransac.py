@@ -6,8 +6,7 @@ from typing import Tuple, Optional
 import numpy as np
 from tqdm import tqdm
 
-from rigid_transform import solver_point_to_point
-from transformation import Transformation
+from base_computation import solver_point_to_point, Transformation
 
 # setting a seed
 rng = np.random.default_rng(seed=72)
