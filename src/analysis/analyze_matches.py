@@ -85,23 +85,3 @@ def plot_distance_hists(
     ax1.set(title="Ratio between the nearest neighbor and the second nearest one")
     ax2.set(title="Ratio between the nearest neighbor and the second nearest one")
     plt.show()
-
-
-def check_transform(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    transformation: Transformation,
-) -> None:
-    """
-    Describes the covering between the two point clouds knowing the exact transformation between the two.
-    """
-    aligned_points = transformation.transform(scan)
-    plt.hist(
-        np.linalg.norm(
-            aligned_points
-            - ref[KDTree(ref).query(aligned_points, return_distance=False).squeeze()],
-            axis=1,
-        ),
-        bins=100,
-    )
-    plt.show()

@@ -25,3 +25,10 @@ from .matching import (
     left_median_filter,
 )
 from .parse_args import parse_args
+from .utils import get_data, write_ply, checkpoint
+from .pipeline import RegistrationPipeline
+from .analysis import (
+    get_transform_from_conf_file,
+    get_incorrect_matches,
+    check_transform,
+)
