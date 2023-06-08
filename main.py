@@ -7,6 +7,8 @@ from src import (
     get_data,
     write_ply,
     checkpoint,
+    check_transform,
+    get_transform_from_conf_file,
     solver_point_to_point,
     compute_point_to_point_error,
     # query points sampling
@@ -35,68 +37,39 @@ if __name__ == "__main__":
 
     global_timer = checkpoint()
     timer = checkpoint()
-    points, normals = get_data(args.file_path, radius=args.fpfh_radius)
-    points_ref, normals_ref = get_data(args.ref_file_path, radius=args.fpfh_radius)
+    scan, scan_normals = get_data(args.file_path, radius=args.fpfh_radius)
+    ref, ref_normals = get_data(args.ref_file_path, radius=args.fpfh_radius)
 
     exact_transformation = None
-    use_conf_file = False
-    if args.conf_file_path != "":
-        try:
-            conf = read_conf_file(args.conf_file_path)
-            exact_transformation = get_resulting_transform(
-                args.file_path, args.ref_file_path, read_conf_file(args.conf_file_path)
-            )
-            import numpy as np
-
-            use_conf_file = True
-        except FileNotFoundError:
-            print(f"Conf file not found under {args.conf_file_path}, ignoring it.")
-
-    check_transform = False  # describes the covering between the two point clouds
-    if check_transform:
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from sklearn.neighbors import KDTree
-
-        aligned_points = exact_transformation[points]
-        plt.hist(
-            np.linalg.norm(
-                aligned_points
-                - points_ref[
-                    KDTree(points_ref)
-                    .query(aligned_points, return_distance=False)
-                    .squeeze()
-                ],
-                axis=1,
-            ),
-            bins=100,
+    try:
+        exact_transformation = get_transform_from_conf_file(
+            args.conf_file_path, args.file_path, args.ref_file_path
         )
-        plt.show()
+    except FileNotFoundError:
+        print(f"Conf file not found under {args.conf_file_path}, ignoring it.")
+
+    run_check_transform = False  # describes the covering between the two point clouds
+    if run_check_transform:
+        check_transform(scan, ref, exact_transformation)
 
     timer("Time spent retrieving the data")
 
     if args.query_points_selection == "random":
         print("\n-- Selecting query points randomly --")
-        points_subset = select_query_indices_randomly(
-            points.shape[0], points.shape[0] // 1
-        )
+        points_subset = select_query_indices_randomly(scan.shape[0], scan.shape[0] // 1)
         points_ref_subset = select_query_indices_randomly(
-            points_ref.shape[0], points_ref.shape[0] // 1
+            ref.shape[0], ref.shape[0] // 1
         )
     elif args.query_points_selection == "iterative":
         print("\n-- Selecting query points iteratively --")
-        points_subset = select_keypoints_iteratively(points, args.shot_radius / 50)
-        points_ref_subset = select_keypoints_iteratively(
-            points_ref, args.shot_radius / 50
-        )
+        points_subset = select_keypoints_iteratively(scan, args.shot_radius / 50)
+        points_ref_subset = select_keypoints_iteratively(ref, args.shot_radius / 50)
     elif args.query_points_selection == "subsampling":
         print(
             "\n-- Selecting query points based on a subsampling on the point cloud --"
         )
-        points_subset = select_keypoints_subsampling(points, args.shot_radius / 50)
-        points_ref_subset = select_keypoints_subsampling(
-            points_ref, args.shot_radius / 50
-        )
+        points_subset = select_keypoints_subsampling(scan, args.shot_radius / 50)
+        points_ref_subset = select_keypoints_subsampling(ref, args.shot_radius / 50)
     else:
         raise ValueError("Incorrect query points selection algorithm.")
     timer("Time spent selecting the key points")
@@ -104,60 +77,60 @@ if __name__ == "__main__":
     print("\n-- Computing the descriptors --")
     if args.shot_first:
         shot = compute_shot_descriptor(
-            points[points_subset], points, normals, radius=args.shot_radius
+            scan[points_subset], scan, scan_normals, radius=args.shot_radius
         )
         fpfh = compute_fpfh_descriptor(
             points_subset,
-            points,
-            normals,
+            scan,
+            scan_normals,
             radius=args.fpfh_radius,
             n_bins=args.fpfh_n_bins,
         )
     else:
         fpfh = compute_fpfh_descriptor(
             points_subset,
-            points,
-            normals,
+            scan,
+            scan_normals,
             radius=args.fpfh_radius,
             n_bins=args.fpfh_n_bins,
         )
         shot = compute_shot_descriptor(
-            points[points_subset], points, normals, radius=args.shot_radius
+            scan[points_subset], scan, scan_normals, radius=args.shot_radius
         )
     timer(
-        f"Time spent computing the descriptors on the point cloud to align ({points.shape[0]} points)"
+        f"Time spent computing the descriptors on the point cloud to align ({scan.shape[0]} points)"
     )
 
     if args.shot_first:
         shot_ref = compute_shot_descriptor(
-            points_ref[points_ref_subset],
-            points_ref,
-            normals_ref,
+            ref[points_ref_subset],
+            ref,
+            ref_normals,
             radius=args.shot_radius,
         )
         fpfh_ref = compute_fpfh_descriptor(
             points_ref_subset,
-            points_ref,
-            normals_ref,
+            ref,
+            ref_normals,
             radius=args.fpfh_radius,
             n_bins=args.fpfh_n_bins,
         )
     else:
         fpfh_ref = compute_fpfh_descriptor(
             points_ref_subset,
-            points_ref,
-            normals_ref,
+            ref,
+            ref_normals,
             radius=args.fpfh_radius,
             n_bins=args.fpfh_n_bins,
         )
         shot_ref = compute_shot_descriptor(
-            points_ref[points_ref_subset],
-            points_ref,
-            normals_ref,
+            ref[points_ref_subset],
+            ref,
+            ref_normals,
             radius=args.shot_radius,
         )
     timer(
-        f"Time spent computing the descriptors on the reference point cloud ({points_ref.shape[0]} points)"
+        f"Time spent computing the descriptors on the reference point cloud ({ref.shape[0]} points)"
     )
     gc.collect()
 
@@ -173,8 +146,8 @@ if __name__ == "__main__":
         ), "Not as many matches as FPFH descriptors"
         if use_conf_file:
             n_correct_matches_fpfh = count_correct_matches(
-                points[points_subset],
-                points_ref[points_ref_subset][matches_fpfh],
+                scan[points_subset],
+                ref[points_ref_subset][matches_fpfh],
                 exact_transformation,
             )
             print(
@@ -182,11 +155,11 @@ if __name__ == "__main__":
             )
 
         rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
-            points,
-            points_ref,
+            scan,
+            ref,
             solver_point_to_point(
-                points[points_subset],
-                points_ref[points_ref_subset][matches_fpfh],
+                scan[points_subset],
+                ref[points_ref_subset][matches_fpfh],
             ),
         )
         timer()
@@ -198,8 +171,8 @@ if __name__ == "__main__":
         ), "Not as many matches as SHOT descriptors"
         if use_conf_file:
             n_correct_matches_shot = count_correct_matches(
-                points[points_subset],
-                points_ref[points_ref_subset][matches_shot],
+                scan[points_subset],
+                ref[points_ref_subset][matches_shot],
                 exact_transformation,
             )
             print(
@@ -207,11 +180,11 @@ if __name__ == "__main__":
             )
 
         rms_shot, points_aligned_shot = compute_point_to_point_error(
-            points,
-            points_ref,
+            scan,
+            ref,
             solver_point_to_point(
-                points[points_subset],
-                points_ref[points_ref_subset][matches_shot],
+                scan[points_subset],
+                ref[points_ref_subset][matches_shot],
             ),
         )
         timer()
@@ -224,27 +197,27 @@ if __name__ == "__main__":
 
         if use_conf_file:
             n_correct_matches_fpfh = count_correct_matches(
-                points[points_subset][matches_fpfh],
-                points_ref[points_ref_subset][matches_fpfh_ref],
+                scan[points_subset][matches_fpfh],
+                ref[points_ref_subset][matches_fpfh_ref],
                 exact_transformation,
             )
             print(
                 f"FPFH: {n_correct_matches_fpfh} correct matches out of {matches_fpfh.shape[0]} matches."
             )
             plot_distance_hists(
-                points[points_subset],
-                points_ref[points_ref_subset],
+                scan[points_subset],
+                ref[points_ref_subset],
                 exact_transformation,
                 fpfh,
                 fpfh_ref,
             )
 
         rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
-            points,
-            points_ref,
+            scan,
+            ref,
             solver_point_to_point(
-                points[points_subset][matches_fpfh],
-                points_ref[points_ref_subset][matches_fpfh_ref],
+                scan[points_subset][matches_fpfh],
+                ref[points_ref_subset][matches_fpfh_ref],
             ),
         )
         timer()
@@ -256,27 +229,27 @@ if __name__ == "__main__":
 
         if use_conf_file:
             n_correct_matches_shot = count_correct_matches(
-                points[points_subset][matches_shot],
-                points_ref[points_ref_subset][matches_shot_ref],
+                scan[points_subset][matches_shot],
+                ref[points_ref_subset][matches_shot_ref],
                 exact_transformation,
             )
             print(
                 f"SHOT: {n_correct_matches_shot} correct matches out of {matches_shot.shape[0]} matches."
             )
             plot_distance_hists(
-                points[points_subset],
-                points_ref[points_ref_subset],
+                scan[points_subset],
+                ref[points_ref_subset],
                 exact_transformation,
                 shot,
                 shot_ref,
             )
 
         rms_shot, points_aligned_shot = compute_point_to_point_error(
-            points,
-            points_ref,
+            scan,
+            ref,
             solver_point_to_point(
-                points[points_subset][matches_shot],
-                points_ref[points_ref_subset][matches_shot_ref],
+                scan[points_subset][matches_shot],
+                ref[points_ref_subset][matches_shot_ref],
             ),
         )
         timer()
@@ -284,14 +257,14 @@ if __name__ == "__main__":
         print("\n -- Matching descriptors using ransac-like matching --")
         rms_fpfh, transformation_fpfh = ransac_on_matches(
             fpfh,
-            points,
-            points[points_subset],
+            scan,
+            scan[points_subset],
             fpfh_ref,
-            points_ref,
-            points_ref[points_ref_subset],
+            ref,
+            ref[points_ref_subset],
         )
         timer("Time spent finding matches between the FPFH descriptors")
-        points_aligned_fpfh = transformation_fpfh[points]
+        points_aligned_fpfh = transformation_fpfh[scan]
         if use_conf_file:
             rotation_diff = (
                 transformation_fpfh.rotation @ exact_transformation.rotation.T
@@ -306,14 +279,14 @@ if __name__ == "__main__":
 
         rms_shot, transformation_shot = ransac_on_matches(
             shot,
-            points,
-            points[points_subset],
+            scan,
+            scan[points_subset],
             shot_ref,
-            points_ref,
-            points_ref[points_ref_subset],
+            ref,
+            ref[points_ref_subset],
         )
         timer("Time spent finding matches between the SHOT descriptors")
-        points_aligned_shot = transformation_shot[points]
+        points_aligned_shot = transformation_shot[scan]
         if use_conf_file:
             rotation_diff = (
                 transformation_shot.rotation @ exact_transformation.rotation.T
@@ -338,16 +311,12 @@ if __name__ == "__main__":
         points_aligned_fpfh_icp,
         rms_fpfh_icp,
         has_fpfh_converged,
-    ) = icp_point_to_point_with_sampling(
-        points_aligned_fpfh, points_ref, args.icp_d_max
-    )
+    ) = icp_point_to_point_with_sampling(points_aligned_fpfh, ref, args.icp_d_max)
     (
         points_aligned_shot_icp,
         rms_shot_icp,
         has_shot_converged,
-    ) = icp_point_to_point_with_sampling(
-        points_aligned_shot, points_ref, args.icp_d_max
-    )
+    ) = icp_point_to_point_with_sampling(points_aligned_shot, ref, args.icp_d_max)
     print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}")
     print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}")
 
