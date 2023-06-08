@@ -29,7 +29,7 @@ from .shot_parallelization import ShotMultiprocessor
 
 
 @dataclass
-class LocalMapsMatcherMeta:
+class RegistrationPipeline:
     """
     Generic class for descriptor-based registration between local maps.
     Allows for a selection among a variety of algorithms for keypoint selection, matching, and ICP.

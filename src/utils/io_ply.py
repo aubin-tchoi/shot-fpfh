@@ -6,8 +6,6 @@ from typing import Tuple, Protocol
 
 import numpy as np
 
-from descriptors import compute_normals
-
 # defining PLY types
 ply_dtypes = dict(
     [
@@ -263,7 +261,7 @@ def get_data(
     recompute_normals: bool = True,
     k: int | None = None,
     radius: float | None = None,
-    compute_normals: NormalsComputationCallback = compute_normals,
+    normals_computation_callback: NormalsComputationCallback | None = None,
 ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     data = read_ply(data_path)
 
@@ -271,23 +269,27 @@ def get_data(
     if "nx" in data.dtype.fields.keys():
         normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
         if recompute_normals:
-            print(f"Recomputing normals using function {compute_normals.__name__}")
-            normals = compute_normals(
+            print(
+                f"Recomputing normals using function {normals_computation_callback.__name__}"
+            )
+            normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals
             )
     elif "n_x" in data.dtype.fields.keys():
         normals = np.vstack((data["n_x"], data["n_y"], data["n_z"])).T
         if recompute_normals:
-            print(f"Recomputing normals using function {compute_normals.__name__}")
-            normals = compute_normals(
+            print(
+                f"Recomputing normals using function {normals_computation_callback.__name__}"
+            )
+            normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals
             )
     else:
-        if compute_normals is None:
+        if normals_computation_callback is None:
             raise ValueError(
                 "The function used to compute normals needs to be specified as the ply file does not contain normals."
             )
-        normals = compute_normals(points, points, k=k, radius=radius)
+        normals = normals_computation_callback(points, points, k=k, radius=radius)
 
     if remove_duplicates:
         filtered_indexes = np.unique(
