@@ -1,8 +1,6 @@
 """
 RANSAC iterations applied to matches between descriptors to find the transformation that aligns best the keypoints.
 """
-from typing import Tuple, Optional
-
 import numpy as np
 from tqdm import tqdm
 
@@ -22,7 +20,7 @@ def ransac_on_matches(
     distance_threshold: float = 1,
     verbose: bool = False,
     disable_progress_bar: bool = False,
-) -> Tuple[float, Transformation]:
+) -> tuple[float, Transformation]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
@@ -32,8 +30,8 @@ def ransac_on_matches(
     Returns:
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
-    best_n_inliers: Optional[int] = None
-    best_transform: Optional[Transformation] = None
+    best_n_inliers: int | None = None
+    best_transform: Transformation | None = None
 
     for _ in (
         pbar := tqdm(

@@ -2,7 +2,7 @@
 Generic pipeline with open choices for the algorithms used to select keypoints and filter matches.
 """
 from dataclasses import dataclass
-from typing import Literal, Tuple, Optional, List, Union, Dict
+from typing import Literal
 
 import numpy as np
 from sklearn.neighbors import KDTree
@@ -44,13 +44,13 @@ class RegistrationPipeline:
     ref: np.ndarray[np.float64]
     ref_normals: np.ndarray[np.float64]
 
-    scan_keypoints: Optional[np.ndarray[np.int32]] = None
-    ref_keypoints: Optional[np.ndarray[np.int32]] = None
+    scan_keypoints: np.ndarray[np.int32] | None = None
+    ref_keypoints: np.ndarray[np.int32] | None = None
 
-    scan_descriptors: Optional[np.ndarray[np.float64]] = None
-    ref_descriptors: Optional[np.ndarray[np.float64]] = None
+    scan_descriptors: np.ndarray[np.float64] | None = None
+    ref_descriptors: np.ndarray[np.float64] | None = None
 
-    matches: Optional[Tuple[np.ndarray[np.int32], np.ndarray[np.int32]]] = None
+    matches: tuple[np.ndarray[np.int32], np.ndarray[np.int32]] | None = None
 
     def select_keypoints(
         self,
@@ -58,8 +58,8 @@ class RegistrationPipeline:
             "random", "iterative", "subsampling", "subsampling_with_density"
         ],
         *,
-        neighborhood_size: Optional[float] = None,
-        min_n_neighbors: Optional[int] = None,
+        neighborhood_size: float | None = None,
+        min_n_neighbors: int | None = None,
         proportion_picked: float = 1.0,
         force_recompute: bool = False,
     ) -> None:
@@ -174,9 +174,9 @@ class RegistrationPipeline:
     def compute_shot_descriptor_single_scale(
         self,
         radius: float,
-        subsampling_voxel_size: Optional[float] = None,
+        subsampling_voxel_size: float | None = None,
         force_recompute: bool = False,
-        **shot_multiprocessor_config: Union[bool, int],
+        **shot_multiprocessor_config: bool | int,
     ) -> None:
         """
         Computes the SHOT descriptor on a single scale.
@@ -218,9 +218,9 @@ class RegistrationPipeline:
         self,
         local_rf_radius: float,
         shot_radius: float,
-        subsampling_voxel_size: Optional[float] = None,
+        subsampling_voxel_size: float | None = None,
         force_recompute: bool = False,
-        **shot_multiprocessor_config: Union[bool, int],
+        **shot_multiprocessor_config: bool | int,
     ) -> np.ndarray[np.float64]:
         """
         Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
@@ -260,11 +260,11 @@ class RegistrationPipeline:
 
     def compute_shot_descriptor_multiscale(
         self,
-        radii: Union[List[float], np.ndarray[np.float64]],
-        voxel_sizes: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
-        weights: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
+        radii: list[float] | np.ndarray[np.float64],
+        voxel_sizes: list[float] | np.ndarray[np.float64] | None = None,
+        weights: list[float] | np.ndarray[np.float64] | None = None,
         force_recompute: bool = False,
-        **shot_multiprocessor_config: Union[bool, int],
+        **shot_multiprocessor_config: bool | int,
     ) -> np.ndarray[np.float64]:
         """
         Computes the SHOT descriptor on multiple scales.
@@ -308,7 +308,7 @@ class RegistrationPipeline:
     def compute_descriptors(
         self,
         descriptor_choice: Literal["shot", "fpfh"] = "shot",
-        **kwargs: Dict[str, Union[int, None]],
+        **kwargs: dict[str, int | None],
     ) -> None:
         if descriptor_choice == "shot":
             self.scan_descriptors = compute_shot_descriptor(
@@ -426,9 +426,9 @@ class RegistrationPipeline:
         n_draws: int = 10000,
         draw_size: int = 4,
         max_inliers_distance: float = 2,
-        exact_transformation: Optional[Transformation] = None,
+        exact_transformation: Transformation | None = None,
         disable_progress_bar: bool = False,
-    ) -> Tuple[Transformation, float]:
+    ) -> tuple[Transformation, float]:
         """
         Performs RANSAC-like draws to match the descriptors.
 
@@ -472,7 +472,7 @@ class RegistrationPipeline:
         max_iter: int = 100,
         rms_threshold: float = 1e-2,
         disable_progress_bar: bool = False,
-    ) -> Tuple[Transformation, float, bool]:
+    ) -> tuple[Transformation, float, bool]:
         """
         Performs an ICP for fine registration between scan and ref.
 
@@ -520,7 +520,7 @@ class RegistrationPipeline:
         self,
         transformation_icp: Transformation,
         distance_threshold: float,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """
         Computes two metrics post-ICP: the overlap and the ratio of inliers on the keypoints.
 

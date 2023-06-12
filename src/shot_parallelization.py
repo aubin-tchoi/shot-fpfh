@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from multiprocessing import Pool
 from types import TracebackType
-from typing import Optional, Union, List
 
 import numpy as np
 from sklearn.neighbors import KDTree
@@ -31,9 +30,9 @@ class ShotMultiprocessor:
 
     def __exit__(
         self,
-        exc_type: Optional[type],
-        exc_val: Optional[Exception],
-        exc_tb: Optional[TracebackType],
+        exc_type: type | None,
+        exc_val: Exception | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         if exc_type is not None:
             self.pool.terminate()
@@ -136,7 +135,7 @@ class ShotMultiprocessor:
         normals: np.ndarray[np.float64],
         keypoints: np.ndarray[np.float64],
         radius: float,
-        subsampling_voxel_size: Optional[float] = None,
+        subsampling_voxel_size: float | None = None,
     ) -> np.ndarray[np.float64]:
         """
         Computes the SHOT descriptor on a single scale.
@@ -187,7 +186,7 @@ class ShotMultiprocessor:
         keypoints: np.ndarray[np.float64],
         local_rf_radius: float,
         shot_radius: float,
-        subsampling_voxel_size: Optional[float] = None,
+        subsampling_voxel_size: float | None = None,
     ) -> np.ndarray[np.float64]:
         """
         Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
@@ -241,9 +240,9 @@ class ShotMultiprocessor:
         point_cloud: np.ndarray[np.float64],
         normals: np.ndarray[np.float64],
         keypoints: np.ndarray[np.float64],
-        radii: Union[List[float], np.ndarray[np.float64]],
-        voxel_sizes: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
-        weights: Optional[Union[List[float], np.ndarray[np.float64]]] = None,
+        radii: list[float] | np.ndarray[np.float64],
+        voxel_sizes: list[float] | np.ndarray[np.float64] | None = None,
+        weights: list[float] | np.ndarray[np.float64] | None = None,
     ) -> np.ndarray[np.float64]:
         """
         Computes the SHOT descriptor on multiple scales.

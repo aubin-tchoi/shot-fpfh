@@ -1,9 +1,6 @@
 """
 Implementation of the ICP method.
 """
-
-from typing import Tuple
-
 import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import trange
@@ -24,7 +21,7 @@ def icp_point_to_point_with_sampling(
     rms_threshold: float = 1e-2,
     sampling_limit: int = 100,
     disable_progress_bar: bool = False,
-) -> Tuple[np.ndarray[np.float64], float, bool]:
+) -> tuple[np.ndarray[np.float64], float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -90,7 +87,7 @@ def icp_point_to_point(
     max_iter: int = 100,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> Tuple[Transformation, float, bool]:
+) -> tuple[Transformation, float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -147,7 +144,7 @@ def icp_point_to_plane(
     max_iter: int = 50,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> Tuple[Transformation, float, bool]:
+) -> tuple[Transformation, float, bool]:
     """
     Point to plane ICP.
     More robust to point clouds of variable densities where the plane estimations by the normals are good.

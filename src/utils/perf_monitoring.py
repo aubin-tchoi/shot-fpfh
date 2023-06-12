@@ -3,7 +3,7 @@ Utility functions to monitor the performances of a program.
 """
 from functools import wraps
 from time import perf_counter
-from typing import Callable, Optional
+from typing import Callable
 
 
 def timeit(func: Callable) -> Callable:
@@ -59,7 +59,7 @@ def runtime_alert(time_limit: int) -> Callable[[], Callable]:
     return inner_func
 
 
-def checkpoint(time_ref: Optional[float] = None) -> Callable[..., None]:
+def checkpoint(time_ref: float | None = None) -> Callable[..., None]:
     """
     Closure that stores a time checkpoint that is updated at every call.
     Each call prints the time elapsed since the last checkpoint with a custom message.

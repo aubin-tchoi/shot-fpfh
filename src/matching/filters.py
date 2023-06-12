@@ -2,8 +2,6 @@
 Filter functions that can be used to filter matches between descriptors based on the distances between each pair of
 matched descriptors.
 """
-from typing import Tuple
-
 import numpy as np
 
 
@@ -16,7 +14,7 @@ def threshold_filter(
 
 def quantile_filter(
     distances: np.ndarray[np.float64],
-    quantiles: Tuple[float, float],
+    quantiles: tuple[float, float],
 ) -> np.ndarray[bool]:
     threshold_values = np.quantile(distances, quantiles)
     return (distances >= threshold_values[0]) & (distances <= threshold_values[1])

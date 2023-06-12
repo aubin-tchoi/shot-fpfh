@@ -2,7 +2,7 @@
 Utility functions to read/write .ply files
 """
 import sys
-from typing import Tuple, Protocol
+from typing import Protocol
 
 import numpy as np
 
@@ -262,7 +262,7 @@ def get_data(
     k: int | None = None,
     radius: float | None = None,
     normals_computation_callback: NormalsComputationCallback | None = None,
-) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     data = read_ply(data_path)
 
     points = np.vstack((data["x"], data["y"], data["z"])).T

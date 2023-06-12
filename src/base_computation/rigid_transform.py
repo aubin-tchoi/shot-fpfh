@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
@@ -53,7 +51,7 @@ def compute_point_to_point_error(
     scan: np.ndarray[np.float64],
     ref: np.ndarray[np.float64],
     transformation: Transformation,
-) -> Tuple[float, np.ndarray[np.float64]]:
+) -> tuple[float, np.ndarray[np.float64]]:
     """
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.

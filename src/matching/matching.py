@@ -1,4 +1,4 @@
-from typing import Tuple, Callable, Union, Optional
+from typing import Callable
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -7,14 +7,13 @@ from scipy.spatial.distance import cdist
 def match_descriptors(
     scan_descriptors: np.ndarray[np.float64],
     ref_descriptors: np.ndarray[np.float64],
-    filter_callback: Optional[
-        Callable[[np.ndarray[np.float64], ...], np.ndarray[bool]]
-    ] = None,
+    filter_callback: Callable[[np.ndarray[np.float64], ...], np.ndarray[bool]]
+    | None = None,
     filter_nonreciprocal: bool = False,
     verbose: bool = True,
     n_min_matches: int = 100,
-    **kwargs: Union[bool, int, float, Tuple[float, float]],
-) -> Tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
+    **kwargs: bool | int | float | tuple[float, float],
+) -> tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
     """
     Computes the distance matrix between two sets of descriptors and filters the nearest match found for each descriptor
     of the query set. Can additionally filter out matches that are not reciprocal.
@@ -114,6 +113,7 @@ def match_descriptors(
 
         if filtered_indices.sum() < n_min_matches and filter_nonreciprocal:
             print("Too few reciprocal matches, keeping non-reciprocal matches.")
+            # noinspection PyArgumentEqualDefault
             return match_descriptors(
                 scan_descriptors,
                 ref_descriptors,
@@ -139,7 +139,7 @@ def match_descriptors(
 
 def basic_matching(
     scan_descriptors: np.ndarray[np.float64], ref_descriptors: np.ndarray[np.float64]
-) -> Tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
+) -> tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
     """
     Matching strategy that matches each descriptor with its nearest neighbor in the feature space.
 
@@ -168,7 +168,7 @@ def double_matching_with_rejects(
     ref_descriptors: np.ndarray[np.float64],
     threshold: float,
     verbose: bool = True,
-) -> Tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
+) -> tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and rejects matches where
     the ratio between the distance to the closest neighbor and to the second-closest neighbor is below a threshold.

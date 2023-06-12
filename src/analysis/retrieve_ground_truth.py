@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -9,7 +7,7 @@ from base_computation import Transformation
 
 
 def quaternion_to_rotation_matrix(
-    quaternion: List[float],
+    quaternion: list[float],
 ) -> np.ndarray[np.float64, (3, 3)]:
     """
     Converts a quaternion into a full three-dimensional rotation matrix.
@@ -18,7 +16,7 @@ def quaternion_to_rotation_matrix(
     return Rotation.from_quat([q0, q1, q2, q3]).as_matrix().squeeze()
 
 
-def read_conf_file(file_path: str) -> Dict[str, Transformation]:
+def read_conf_file(file_path: str) -> dict[str, Transformation]:
     """
     Reads a .conf file from the Stanford 3D Scanning Repository to output the (translation, rotation) for each ply file.
     """

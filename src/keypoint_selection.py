@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from sklearn.neighbors import KDTree
 
@@ -67,7 +65,7 @@ def select_keypoints_with_density_threshold(
     points: np.ndarray[np.float64],
     voxel_size: float,
     density_threshold_value: int,
-    density_threshold_radius: Optional[float] = None,
+    density_threshold_radius: float | None = None,
 ) -> np.ndarray[np.int32]:
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
@@ -127,7 +125,7 @@ def filter_keypoints(
     keypoints: np.ndarray[np.int32],
     normals: np.ndarray[np.float64],
     normals_z_threshold: float = 0.8,
-    sphericity: Optional[np.ndarray[np.float64]] = None,
+    sphericity: np.ndarray[np.float64] | None = None,
     sphericity_threshold: float = 0.16,
     verbose: bool = True,
 ) -> np.ndarray[np.int32]:
