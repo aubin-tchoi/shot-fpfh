@@ -2,14 +2,14 @@
 Generic pipeline with open choices for the algorithms used to select keypoints and filter matches.
 """
 from dataclasses import dataclass
-from typing import Literal, Tuple, Optional, List, Union
+from typing import Literal, Tuple, Optional, List, Union, Dict
 
 import numpy as np
+from sklearn.neighbors import KDTree
 
 from base_computation import Transformation
-from utils import checkpoint
 from .analysis import get_incorrect_matches, plot_distance_hists
-from .descriptors import compute_sphericity
+from .descriptors import compute_sphericity, compute_shot_descriptor, compute_fpfh_descriptor
 from .icp import icp_point_to_point, icp_point_to_plane
 from .keypoint_selection import (
     select_query_indices_randomly,
@@ -301,6 +301,32 @@ class RegistrationPipeline:
                     )
                 )
 
+    def compute_descriptors(
+        self,
+        descriptor_choice: Literal["shot", "fpfh"] = "shot",
+        **kwargs: Dict[str, Union[int, None]],
+    ) -> None:
+        if descriptor_choice == "shot":
+            self.scan_descriptors = compute_shot_descriptor(
+                self.scan[self.scan_keypoints], self.scan, self.scan_normals, **kwargs
+            )
+            self.ref_descriptors = compute_shot_descriptor(
+                self.ref[self.ref_keypoints], self.ref, self.ref_normals, **kwargs
+            )
+        elif descriptor_choice == "fpfh":
+            self.scan_descriptors = compute_fpfh_descriptor(
+                self.scan_keypoints,
+                self.scan,
+                self.scan_normals,
+                **kwargs,
+            )
+            self.ref_descriptors = compute_fpfh_descriptor(
+                self.ref_keypoints,
+                self.ref,
+                self.ref_normals,
+                **kwargs,
+            )
+
     def find_descriptors_matches(
         self,
         matching_algorithm: Literal["simple", "double", "threshold"],
@@ -320,7 +346,6 @@ class RegistrationPipeline:
             debug_mode: Enables a debug mode that additionally prints the maximum distance between matched descriptors.
             force_recompute: Whether the descriptors should be recomputed even if already present.
         """
-        timer = checkpoint()
         if matching_algorithm == "simple":
             print(
                 "\n-- Matching descriptors using simple matching to closest neighbor --"
@@ -329,7 +354,6 @@ class RegistrationPipeline:
                 self.matches = basic_matching(
                     self.scan_descriptors, self.ref_descriptors
                 )
-            timer("Time spent finding matches between the SHOT descriptors")
 
         elif matching_algorithm == "double":
             print("\n-- Matching descriptors using double matching with rejects --")
@@ -337,7 +361,6 @@ class RegistrationPipeline:
                 self.matches = double_matching_with_rejects(
                     self.scan_descriptors, self.ref_descriptors, reject_threshold
                 )
-            timer("Time spent finding matches between the SHOT descriptors")
 
         elif matching_algorithm == "threshold":
             print("\n-- Matching descriptors using threshold-based matching --")
@@ -348,7 +371,6 @@ class RegistrationPipeline:
                     threshold_filter,
                     threshold_multiplier=threshold_multiplier,
                 )
-            timer("Time spent finding matches between the SHOT descriptors")
 
         else:
             raise ValueError("Incorrect matching algorithm selection.")
@@ -400,7 +422,7 @@ class RegistrationPipeline:
         n_draws: int = 10000,
         draw_size: int = 4,
         max_inliers_distance: float = 2,
-        transformation: Optional[Transformation] = None,
+        exact_transformation: Optional[Transformation] = None,
         disable_progress_bar: bool = False,
     ) -> Tuple[Transformation, float]:
         """
@@ -410,17 +432,14 @@ class RegistrationPipeline:
             n_draws: Number of draws.
             draw_size: Number of descriptors picked in each draw.
             max_inliers_distance: Threshold on the distance to consider two points as a pair of inliers.
-            transformation: The exact transformation that registers the two point clouds (only used for analysis).
+            exact_transformation: The exact transformation that registers the two point clouds (only used for analysis).
             disable_progress_bar: Whether the progress bar on the iterations of RANSAC should be disabled.
 
         Returns:
             The resulting transformation, and the ratio of inliers on the keypoints.
         """
         print("\n -- Aligning the point clouds by RANSAC-ing the matches --")
-        (
-            inliers_ratio_shot,
-            transformation_shot,
-        ) = ransac_on_matches(
+        inliers_ratio, transformation = ransac_on_matches(
             *self.matches,
             self.scan[self.scan_keypoints],
             self.ref[self.ref_keypoints],
@@ -429,15 +448,15 @@ class RegistrationPipeline:
             distance_threshold=max_inliers_distance,
             disable_progress_bar=disable_progress_bar,
         )
-        if transformation is not None:
+        if exact_transformation is not None:
             print(
                 f"Norm of the angle between the two rotations: "
-                f"{abs(np.arccos((np.trace(transformation_shot.rotation @ transformation.rotation.T) - 1) / 2)):.2f}"
+                f"{abs(np.arccos((np.trace(exact_transformation.rotation @ transformation.rotation.T) - 1) / 2)):.2f}"
                 f"\nNorm of the difference between the two translation: "
-                f"{np.linalg.norm(transformation_shot.translation - transformation.translation):.2f}"
+                f"{np.linalg.norm(exact_transformation.translation - transformation.translation):.2f}"
             )
 
-        return transformation_shot, inliers_ratio_shot
+        return transformation, inliers_ratio
 
     def run_icp(
         self,
@@ -492,3 +511,57 @@ class RegistrationPipeline:
             )
         else:
             raise ValueError("Incorrect ICP type selected.")
+
+    def compute_metrics_post_icp(
+        self,
+        transformation_icp: Transformation,
+        distance_threshold: float,
+    ) -> Tuple[float, float]:
+        """
+        Computes two metrics post-ICP: the overlap and the ratio of inliers on the keypoints.
+
+        Args:
+            transformation_icp: The 4x4 transformation returned by the ICP.
+            distance_threshold: Threshold on the distance to count a pair as inliers.
+
+        Returns:
+            The overlap between scan and ref and the ratio of inliers on the keypoints.
+        """
+        points_aligned_icp = transformation_icp.transform(self.scan)
+
+        def get_inlier_points(
+            scan_points: np.ndarray[np.float64], ref_points: np.ndarray[np.float64]
+        ) -> np.ndarray[bool]:
+            """
+            Retrieves a mask on an array of points that indicates whether a point has a neighbor in ref within a certain
+            distance.
+
+            Args:
+                scan_points: The points to align.
+                ref_points: The reference point cloud.
+
+            Returns:
+                A mask array where True values indicate inliers.
+            """
+            return (
+                np.linalg.norm(
+                    scan_points
+                    - ref_points[
+                        KDTree(ref_points)
+                        .query(scan_points, return_distance=False)
+                        .squeeze()
+                    ],
+                    axis=1,
+                )
+                <= distance_threshold
+            )
+
+        return (
+            get_inlier_points(points_aligned_icp, self.ref).sum()
+            / points_aligned_icp.shape[0],
+            get_inlier_points(
+                points_aligned_icp[self.scan_keypoints],
+                self.ref[self.ref_keypoints],
+            ).sum()
+            / self.scan_keypoints.shape[0],
+        )
