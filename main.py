@@ -8,25 +8,9 @@ from src import (
     write_ply,
     checkpoint,
     check_transform,
+    get_incorrect_matches,
     get_transform_from_conf_file,
-    solver_point_to_point,
-    compute_point_to_point_error,
-    # query points sampling
-    select_query_indices_randomly,
-    select_keypoints_iteratively,
-    select_keypoints_subsampling,
-    # descriptors
-    compute_shot_descriptor,
-    compute_fpfh_descriptor,
-    # matching algorithms
-    basic_matching,
-    double_matching_with_rejects,
-    ransac_on_matches,
-    icp_point_to_point_with_sampling,
-    get_resulting_transform,
-    read_conf_file,
-    count_correct_matches,
-    plot_distance_hists,
+    RegistrationPipeline,
 )
 
 warnings.filterwarnings("ignore")
@@ -54,281 +38,71 @@ if __name__ == "__main__":
 
     timer("Time spent retrieving the data")
 
-    if args.query_points_selection == "random":
-        print("\n-- Selecting query points randomly --")
-        points_subset = select_query_indices_randomly(scan.shape[0], scan.shape[0] // 1)
-        points_ref_subset = select_query_indices_randomly(
-            ref.shape[0], ref.shape[0] // 1
-        )
-    elif args.query_points_selection == "iterative":
-        print("\n-- Selecting query points iteratively --")
-        points_subset = select_keypoints_iteratively(scan, args.shot_radius / 50)
-        points_ref_subset = select_keypoints_iteratively(ref, args.shot_radius / 50)
-    elif args.query_points_selection == "subsampling":
-        print(
-            "\n-- Selecting query points based on a subsampling on the point cloud --"
-        )
-        points_subset = select_keypoints_subsampling(scan, args.shot_radius / 50)
-        points_ref_subset = select_keypoints_subsampling(ref, args.shot_radius / 50)
-    else:
-        raise ValueError("Incorrect query points selection algorithm.")
+    pipeline = RegistrationPipeline(
+        scan=scan, scan_normals=scan_normals, ref=ref, ref_normals=ref_normals
+    )
+    pipeline.select_keypoints(
+        args.keypoint_selection,
+        neighborhood_size=args.shot_radius / 50,
+        min_n_neighbors=args.min_n_neighbors,
+    )
     timer("Time spent selecting the key points")
 
-    print("\n-- Computing the descriptors --")
-    if args.shot_first:
-        shot = compute_shot_descriptor(
-            scan[points_subset], scan, scan_normals, radius=args.shot_radius
-        )
-        fpfh = compute_fpfh_descriptor(
-            points_subset,
-            scan,
-            scan_normals,
-            radius=args.fpfh_radius,
-            n_bins=args.fpfh_n_bins,
-        )
-    else:
-        fpfh = compute_fpfh_descriptor(
-            points_subset,
-            scan,
-            scan_normals,
-            radius=args.fpfh_radius,
-            n_bins=args.fpfh_n_bins,
-        )
-        shot = compute_shot_descriptor(
-            scan[points_subset], scan, scan_normals, radius=args.shot_radius
-        )
-    timer(
-        f"Time spent computing the descriptors on the point cloud to align ({scan.shape[0]} points)"
+    pipeline.apply_filter_on_keypoints(
+        normals_z_threshold=args.normals_z_threshold,
+        sphericity_threshold=args.sphericity_threshold,
+        sphericity_computation_radius=args.sphericity_computation_radius,
     )
+    timer("Time spent filtering the key points")
 
-    if args.shot_first:
-        shot_ref = compute_shot_descriptor(
-            ref[points_ref_subset],
-            ref,
-            ref_normals,
-            radius=args.shot_radius,
-        )
-        fpfh_ref = compute_fpfh_descriptor(
-            points_ref_subset,
-            ref,
-            ref_normals,
-            radius=args.fpfh_radius,
-            n_bins=args.fpfh_n_bins,
-        )
-    else:
-        fpfh_ref = compute_fpfh_descriptor(
-            points_ref_subset,
-            ref,
-            ref_normals,
-            radius=args.fpfh_radius,
-            n_bins=args.fpfh_n_bins,
-        )
-        shot_ref = compute_shot_descriptor(
-            ref[points_ref_subset],
-            ref,
-            ref_normals,
-            radius=args.shot_radius,
-        )
+    pipeline.compute_descriptors(
+        args.descriptor_choice, radius=args.radius, n_bins=args.fpfh_n_bins
+    )
     timer(
         f"Time spent computing the descriptors on the reference point cloud ({ref.shape[0]} points)"
     )
     gc.collect()
 
-    # matching
-    if args.matching_algorithm == "simple":
-        print("\n-- Matching descriptors using simple matching to closest neighbor --")
-        matches_fpfh = basic_matching(fpfh, fpfh_ref)
-        timer("Time spent finding matches between the FPFH descriptors")
+    pipeline.find_descriptors_matches(
+        args.matching_algorithm,
+        reject_threshold=args.reject_threshold,
+        threshold_multiplier=args.threshold_multiplier,
+    )
+    timer(f"Time spent finding matches between the descriptors")
 
-        # validation
-        assert (
-            matches_fpfh.shape[0] == fpfh.shape[0]
-        ), "Not as many matches as FPFH descriptors"
-        if use_conf_file:
-            n_correct_matches_fpfh = count_correct_matches(
-                scan[points_subset],
-                ref[points_ref_subset][matches_fpfh],
-                exact_transformation,
-            )
-            print(
-                f"FPFH: {n_correct_matches_fpfh} correct matches out of {fpfh.shape[0]} descriptors."
-            )
-
-        rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
-            scan,
-            ref,
-            solver_point_to_point(
-                scan[points_subset],
-                ref[points_ref_subset][matches_fpfh],
-            ),
+    if exact_transformation is not None:
+        correct_matches = get_incorrect_matches(
+            pipeline.scan[pipeline.scan_keypoints][pipeline.matches[0]],
+            pipeline.ref[pipeline.ref_keypoints][pipeline.matches[1]],
+            exact_transformation,
         )
-        timer()
-
-        matches_shot = basic_matching(shot, shot_ref)
-        timer("Time spent finding matches between the SHOT descriptors")
-        assert (
-            matches_shot.shape[0] == shot.shape[0]
-        ), "Not as many matches as SHOT descriptors"
-        if use_conf_file:
-            n_correct_matches_shot = count_correct_matches(
-                scan[points_subset],
-                ref[points_ref_subset][matches_shot],
-                exact_transformation,
-            )
-            print(
-                f"SHOT: {n_correct_matches_shot} correct matches out of {shot.shape[0]} descriptors."
-            )
-
-        rms_shot, points_aligned_shot = compute_point_to_point_error(
-            scan,
-            ref,
-            solver_point_to_point(
-                scan[points_subset],
-                ref[points_ref_subset][matches_shot],
-            ),
+        print(
+            f"{correct_matches.sum()} correct matches out of {pipeline.scan_descriptors.shape[0]} descriptors."
         )
-        timer()
-    elif args.matching_algorithm == "double":
-        print("\n-- Matching descriptors using double matching with rejects --")
-        matches_fpfh, matches_fpfh_ref = double_matching_with_rejects(
-            fpfh, fpfh_ref, args.reject_threshold
-        )
-        timer("Time spent finding matches between the FPFH descriptors")
 
-        if use_conf_file:
-            n_correct_matches_fpfh = count_correct_matches(
-                scan[points_subset][matches_fpfh],
-                ref[points_ref_subset][matches_fpfh_ref],
-                exact_transformation,
-            )
-            print(
-                f"FPFH: {n_correct_matches_fpfh} correct matches out of {matches_fpfh.shape[0]} matches."
-            )
-            plot_distance_hists(
-                scan[points_subset],
-                ref[points_ref_subset],
-                exact_transformation,
-                fpfh,
-                fpfh_ref,
-            )
-
-        rms_fpfh, points_aligned_fpfh = compute_point_to_point_error(
-            scan,
-            ref,
-            solver_point_to_point(
-                scan[points_subset][matches_fpfh],
-                ref[points_ref_subset][matches_fpfh_ref],
-            ),
-        )
-        timer()
-
-        matches_shot, matches_shot_ref = double_matching_with_rejects(
-            shot, shot_ref, args.reject_threshold
-        )
-        timer("Time spent finding matches between the SHOT descriptors")
-
-        if use_conf_file:
-            n_correct_matches_shot = count_correct_matches(
-                scan[points_subset][matches_shot],
-                ref[points_ref_subset][matches_shot_ref],
-                exact_transformation,
-            )
-            print(
-                f"SHOT: {n_correct_matches_shot} correct matches out of {matches_shot.shape[0]} matches."
-            )
-            plot_distance_hists(
-                scan[points_subset],
-                ref[points_ref_subset],
-                exact_transformation,
-                shot,
-                shot_ref,
-            )
-
-        rms_shot, points_aligned_shot = compute_point_to_point_error(
-            scan,
-            ref,
-            solver_point_to_point(
-                scan[points_subset][matches_shot],
-                ref[points_ref_subset][matches_shot_ref],
-            ),
-        )
-        timer()
-    elif args.matching_algorithm == "ransac":
-        print("\n -- Matching descriptors using ransac-like matching --")
-        rms_fpfh, transformation_fpfh = ransac_on_matches(
-            fpfh,
-            scan,
-            scan[points_subset],
-            fpfh_ref,
-            ref,
-            ref[points_ref_subset],
-        )
-        timer("Time spent finding matches between the FPFH descriptors")
-        points_aligned_fpfh = transformation_fpfh[scan]
-        if use_conf_file:
-            rotation_diff = (
-                transformation_fpfh.rotation @ exact_transformation.rotation.T
-            )
-            print(
-                f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(rotation_diff) - 1) / 2)):.2f}\n"
-                f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(transformation_fpfh.translation - exact_transformation.translation):.2f}"
-            )
-        timer()
-
-        rms_shot, transformation_shot = ransac_on_matches(
-            shot,
-            scan,
-            scan[points_subset],
-            shot_ref,
-            ref,
-            ref[points_ref_subset],
-        )
-        timer("Time spent finding matches between the SHOT descriptors")
-        points_aligned_shot = transformation_shot[scan]
-        if use_conf_file:
-            rotation_diff = (
-                transformation_shot.rotation @ exact_transformation.rotation.T
-            )
-            print(
-                f"Norm of the angle between the two rotations: "
-                f"{np.abs(np.arccos((np.trace(rotation_diff) - 1) / 2)):.2f}\n"
-                f"Norm of the difference between the two translation: "
-                f"{np.linalg.norm(transformation_shot.translation - exact_transformation.translation):.2f}"
-            )
-        timer()
-    else:
-        raise ValueError("Incorrect matching algorithm selection.")
+    transformation_ransac, inliers_ratio = pipeline.run_ransac()
+    timer("Time spent on RANSAC")
+    print(
+        f"\nRatio of inliers pre-ICP: {inliers_ratio * 100:.2f}%\nTransformation pre-ICP:"
+    )
+    print(transformation_ransac)
     gc.collect()
 
-    print(f"\nRMS error with FPFH: {rms_fpfh:.2f}")
-    print(f"RMS error with SHOT: {rms_shot:.2f}")
-
-    # fine registration using an icp
-    print("\n-- Running ICPs --")
-    (
-        points_aligned_fpfh_icp,
-        rms_fpfh_icp,
-        has_fpfh_converged,
-    ) = icp_point_to_point_with_sampling(points_aligned_fpfh, ref, args.icp_d_max)
-    (
-        points_aligned_shot_icp,
-        rms_shot_icp,
-        has_shot_converged,
-    ) = icp_point_to_point_with_sampling(points_aligned_shot, ref, args.icp_d_max)
-    print(f"RMS error with FPFH + ICP: {rms_fpfh_icp:.2f}")
-    print(f"RMS error with SHOT + ICP: {rms_shot_icp:.2f}")
-
-    print(
-        f"The ICP starting from the registration obtained by matching"
-        f" FPFH descriptors has{'' if has_fpfh_converged else ' not'} converged."
+    transformation_icp, distance_to_map, has_icp_converged = pipeline.run_icp(
+        args.icp_type, transformation_ransac, d_max=args.icp_d_max
     )
-    print(
-        f"The ICP starting from the registration obtained by matching"
-        f" SHOT descriptors has{'' if has_shot_converged else ' not'} converged."
+    overlap, inliers_ratio_post_icp = pipeline.compute_metrics_post_icp(
+        transformation_icp,
+        args.icp_d_max,
     )
     timer("Time spent on ICP")
+    print(
+        f"\nRMS error on the ICP:  {distance_to_map:.4f} (has converged: {'OK'[::has_icp_converged * 2 - 1]})."
+        f"\nProportion of inliers: {inliers_ratio_post_icp * 100:.2f}%"
+        f"\nPercentage of overlap: {overlap * 100:.2f}%"
+        f"\nTransformation post-ICP:"
+    )
+    print(transformation_icp)
 
     if not args.disable_ply_writing:
         print(
@@ -339,23 +113,13 @@ if __name__ == "__main__":
 
         file_name = args.file_path.split("/")[-1].replace(".ply", "")
         write_ply(
-            f"./data/results/{file_name}_registered_fpfh-{args.matching_algorithm}.ply",
-            [points_aligned_fpfh],
+            f"./data/results/{file_name}_post_ransac.ply",
+            [transformation_ransac[pipeline.scan]],
             ["x", "y", "z"],
         )
         write_ply(
-            f"./data/results/{file_name}_registered_shot-{args.matching_algorithm}.ply",
-            [points_aligned_shot],
-            ["x", "y", "z"],
-        )
-        write_ply(
-            f"./data/results/{file_name}_registered_fpfh_icp-{args.matching_algorithm}.ply",
-            [points_aligned_fpfh_icp],
-            ["x", "y", "z"],
-        )
-        write_ply(
-            f"./data/results/{file_name}_registered_shot_icp-{args.matching_algorithm}.ply",
-            [points_aligned_shot_icp],
+            f"./data/results/{file_name}_post_icp.ply",
+            [transformation_icp[pipeline.scan]],
             ["x", "y", "z"],
         )
 
