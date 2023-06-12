@@ -9,7 +9,11 @@ from sklearn.neighbors import KDTree
 
 from base_computation import Transformation
 from .analysis import get_incorrect_matches, plot_distance_hists
-from .descriptors import compute_sphericity, compute_shot_descriptor, compute_fpfh_descriptor
+from .descriptors import (
+    compute_sphericity,
+    compute_shot_descriptor,
+    compute_fpfh_descriptor,
+)
 from .icp import icp_point_to_point, icp_point_to_plane
 from .keypoint_selection import (
     select_query_indices_randomly,
@@ -527,7 +531,7 @@ class RegistrationPipeline:
         Returns:
             The overlap between scan and ref and the ratio of inliers on the keypoints.
         """
-        points_aligned_icp = transformation_icp.transform(self.scan)
+        points_aligned_icp = transformation_icp[self.scan]
 
         def get_inlier_points(
             scan_points: np.ndarray[np.float64], ref_points: np.ndarray[np.float64]

@@ -58,7 +58,7 @@ def compute_point_to_point_error(
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.
     """
-    transformed_data = transformation.transform(scan)
+    transformed_data = transformation[scan]
     neighbors = KDTree(ref).query(transformed_data, return_distance=False).squeeze()
     return (
         np.sqrt(

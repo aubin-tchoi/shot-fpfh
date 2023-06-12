@@ -26,9 +26,9 @@ def get_incorrect_matches(
     Returns:
         incorrect_matches: incorrect matches as an array of booleans.
     """
-    return (
-        np.linalg.norm(exact_transformation.transform(scan) - ref, axis=1) > 1e-2
-    ).astype(bool)
+    return (np.linalg.norm(exact_transformation[scan] - ref, axis=1) > 1e-2).astype(
+        bool
+    )
 
 
 def plot_distance_hists(
@@ -50,7 +50,7 @@ def plot_distance_hists(
         ref_descriptors: descriptors computed on ref.
     """
     kdtree = KDTree(ref)
-    dist_points, indices_points = kdtree.query(exact_transformation.transform(scan))
+    dist_points, indices_points = kdtree.query(exact_transformation[scan])
 
     kdtree = KDTree(ref_descriptors)
     distances_desc, indices_desc = kdtree.query(scan_descriptors, 2)

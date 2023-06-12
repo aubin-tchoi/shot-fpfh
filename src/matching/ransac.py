@@ -57,7 +57,7 @@ def ransac_on_matches(
             )
             n_inliers = (
                 np.linalg.norm(
-                    transformation.transform(scan_keypoints[scan_descriptors_indices])
+                    transformation[scan_keypoints[scan_descriptors_indices]]
                     - ref_keypoints[ref_descriptors_indices],
                     axis=1,
                 )

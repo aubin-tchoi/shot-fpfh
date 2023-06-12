@@ -71,7 +71,7 @@ def icp_point_to_point_with_sampling(
                 )
             )
             pbar.set_description(f"ICP - current RMS: {rms:.2f}")
-            points_aligned = transformation.transform(points_aligned)
+            points_aligned = transformation[points_aligned]
             if rms < rms_threshold:
                 break
         except KeyboardInterrupt:
@@ -107,7 +107,7 @@ def icp_point_to_point(
     ):
         # this loop can be stopped preemptively by a CTRL+C
         try:
-            points_aligned = transformation_icp.transform(scan[subsampled_indices])
+            points_aligned = transformation_icp[scan[subsampled_indices]]
             distances, neighbors = kdtree.query(points_aligned)
 
             # keeping the inliers only
@@ -164,7 +164,7 @@ def icp_point_to_plane(
     ):
         # this loop can be stopped preemptively by a CTRL+C
         try:
-            points_aligned = transformation_icp.transform(scan[subsampled_indices])
+            points_aligned = transformation_icp[scan[subsampled_indices]]
             distances, neighbors = kdtree.query(points_aligned)
 
             # keeping the inliers only
