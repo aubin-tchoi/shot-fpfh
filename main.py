@@ -1,6 +1,6 @@
 import gc
-import os
 import warnings
+from pathlib import Path
 
 from src import (
     parse_args,
@@ -108,17 +108,16 @@ if __name__ == "__main__":
         print(
             "\n -- Writing the aligned points cloud in ply files under './data/results' --"
         )
-        if not os.path.isdir("./data/results"):
-            os.mkdir("./data/results")
+        (results_folder := Path("./data/results")).mkdir(exist_ok=True, parents=True)
+        file_name = Path(args.file_path).stem
 
-        file_name = args.file_path.split("/")[-1].replace(".ply", "")
         write_ply(
-            f"./data/results/{file_name}_post_ransac.ply",
+            str(results_folder / f"{file_name}_post_ransac.ply"),
             [transformation_ransac[pipeline.scan]],
             ["x", "y", "z"],
         )
         write_ply(
-            f"./data/results/{file_name}_post_icp.ply",
+            str(results_folder / f"{file_name}_post_icp.ply"),
             [transformation_icp[pipeline.scan]],
             ["x", "y", "z"],
         )
