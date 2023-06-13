@@ -14,19 +14,19 @@ def parse_args() -> argparse.Namespace:
         "--file_path",
         type=str,
         default="./data/bunny_returned.ply",
-        help="Path to the first point cloud to use",
+        help="Path to the first point cloud to use.",
     )
     parser.add_argument(
         "--ref_file_path",
         type=str,
         default="./data/bunny_original.ply",
-        help="Path to the second point cloud to use (reference point cloud)",
+        help="Path to the second point cloud to use (reference point cloud).",
     )
     parser.add_argument(
         "--conf_file_path",
         type=str,
         default="./data/bunny/bun.conf",
-        help="Path to the .conf file used to count correct matches. Leave empty to ignore",
+        help="Path to the .conf file used to count correct matches. Leave empty to ignore.",
     )
     parser.add_argument(
         "--disable_ply_writing",
@@ -43,14 +43,26 @@ def parse_args() -> argparse.Namespace:
         "--keypoint_selection",
         choices=["random", "iterative", "subsampling"],
         type=str,
-        default="random",
+        default="subsampling",
         help="Choice of the algorithm to select keypoints to compute descriptors on.",
     )
     parser.add_argument(
         "--keypoint_voxel_size",
         type=float,
-        default=1.0,
-        help="Size of the voxels in the subsampling-based keypoint selection",
+        default=0.005,
+        help="Size of the voxels in the subsampling-based keypoint selection.",
+    )
+    parser.add_argument(
+        "--keypoint_density_threshold",
+        type=int,
+        default=100,
+        help="Minimum number of neighbors used to filter keypoints.",
+    )
+    parser.add_argument(
+        "--normals_computation_k",
+        type=int,
+        default=30,
+        help="Number of neighbors used to compute normals.",
     )
     parser.add_argument(
         "--normals_z_threshold",
@@ -71,6 +83,13 @@ def parse_args() -> argparse.Namespace:
         help="Radius used in the keypoint selection process to compute the sphericity.",
     )
     # descriptors
+    parser.add_argument(
+        "--descriptor_choice",
+        choices=["fpfh", "shot"],
+        type=str,
+        default="shot",
+        help="Choice of the descriptor.",
+    )
     parser.add_argument(
         "--radius",
         type=float,

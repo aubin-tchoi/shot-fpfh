@@ -2,6 +2,8 @@ import gc
 import warnings
 from pathlib import Path
 
+import numpy as np
+
 from src import (
     parse_args,
     get_data,
@@ -11,6 +13,7 @@ from src import (
     get_incorrect_matches,
     get_transform_from_conf_file,
     RegistrationPipeline,
+    compute_normals,
 )
 
 warnings.filterwarnings("ignore")
@@ -21,16 +24,26 @@ if __name__ == "__main__":
 
     global_timer = checkpoint()
     timer = checkpoint()
-    scan, scan_normals = get_data(args.file_path, radius=args.fpfh_radius)
-    ref, ref_normals = get_data(args.ref_file_path, radius=args.fpfh_radius)
+    scan, scan_normals = get_data(
+        args.file_path,
+        k=args.normals_computation_k,
+        normals_computation_callback=compute_normals,
+    )
+    ref, ref_normals = get_data(
+        args.ref_file_path,
+        k=args.normals_computation_k,
+        normals_computation_callback=compute_normals,
+    )
 
     exact_transformation = None
     try:
         exact_transformation = get_transform_from_conf_file(
             args.conf_file_path, args.file_path, args.ref_file_path
         )
-    except FileNotFoundError:
-        print(f"Conf file not found under {args.conf_file_path}, ignoring it.")
+    except (FileNotFoundError, KeyError):
+        print(
+            f"Conf file not found or incorrect under {args.conf_file_path}, ignoring it."
+        )
 
     run_check_transform = False  # describes the covering between the two point clouds
     if run_check_transform:
@@ -44,21 +57,14 @@ if __name__ == "__main__":
     pipeline.select_keypoints(
         args.keypoint_selection,
         neighborhood_size=args.keypoint_voxel_size,
-        min_n_neighbors=args.min_n_neighbors,
+        min_n_neighbors=args.keypoint_density_threshold,
     )
     timer("Time spent selecting the key points")
 
-    pipeline.apply_filter_on_keypoints(
-        normals_z_threshold=args.normals_z_threshold,
-        sphericity_threshold=args.sphericity_threshold,
-        sphericity_computation_radius=args.sphericity_computation_radius,
-    )
-    timer("Time spent filtering the key points")
-
     pipeline.compute_descriptors(
-        args.descriptor_choice,
+        descriptor_choice=args.descriptor_choice,
         radius=args.radius,
-        n_bins=args.fpfh_n_bins,
+        fpfh_n_bins=args.fpfh_n_bins,
         disable_progress_bars=args.disable_progress_bars,
     )
     timer(

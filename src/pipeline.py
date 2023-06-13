@@ -60,7 +60,7 @@ class RegistrationPipeline:
         *,
         neighborhood_size: float | None = None,
         min_n_neighbors: int | None = None,
-        proportion_picked: float = 1.0,
+        proportion_picked: float = 0.5,
         force_recompute: bool = False,
     ) -> None:
         """
@@ -120,6 +120,8 @@ class RegistrationPipeline:
                 )
         else:
             raise ValueError("Incorrect keypoint selection algorithm.")
+        print(f"{self.scan_keypoints.shape[0]} descriptors selected on scan out of {self.scan.shape[0]} points.")
+        print(f"{self.ref_keypoints.shape[0]} descriptors selected on ref out of {self.ref.shape[0]} points.")
 
     def apply_filter_on_keypoints(
         self,
@@ -307,27 +309,41 @@ class RegistrationPipeline:
 
     def compute_descriptors(
         self,
+        radius: float,
         descriptor_choice: Literal["shot", "fpfh"] = "shot",
+        fpfh_n_bins: int = 5,
         **kwargs: dict[str, int | None],
     ) -> None:
         if descriptor_choice == "shot":
             self.scan_descriptors = compute_shot_descriptor(
-                self.scan[self.scan_keypoints], self.scan, self.scan_normals, **kwargs
+                self.scan[self.scan_keypoints],
+                self.scan,
+                self.scan_normals,
+                radius=radius,
+                **kwargs,
             )
             self.ref_descriptors = compute_shot_descriptor(
-                self.ref[self.ref_keypoints], self.ref, self.ref_normals, **kwargs
+                self.ref[self.ref_keypoints],
+                self.ref,
+                self.ref_normals,
+                radius=radius,
+                **kwargs,
             )
         elif descriptor_choice == "fpfh":
             self.scan_descriptors = compute_fpfh_descriptor(
                 self.scan_keypoints,
                 self.scan,
                 self.scan_normals,
+                radius=radius,
+                n_bins=fpfh_n_bins,
                 **kwargs,
             )
             self.ref_descriptors = compute_fpfh_descriptor(
                 self.ref_keypoints,
                 self.ref,
                 self.ref_normals,
+                radius=radius,
+                n_bins=fpfh_n_bins,
                 **kwargs,
             )
 
