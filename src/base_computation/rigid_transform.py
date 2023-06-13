@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
-from transformation import Transformation
+from .transformation import Transformation
 
 
 def solver_point_to_point(
