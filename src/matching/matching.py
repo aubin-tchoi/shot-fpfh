@@ -157,10 +157,7 @@ def basic_matching(
         ref_descriptors[non_empty_ref_descriptors],
     )
     indices = distance_matrix.argmin(axis=1)
-    return (
-        non_empty_descriptors.nonzero()[0],
-        non_empty_ref_descriptors[indices],
-    )
+    return non_empty_descriptors, non_empty_ref_descriptors[indices]
 
 
 def double_matching_with_rejects(
