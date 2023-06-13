@@ -28,13 +28,17 @@ class Transformation:
             A string representation of the 4x4 transformation matrix.
         """
         with np.printoptions(suppress=True):
-            return str(
-                np.vstack(
-                    (
-                        np.hstack((self.rotation, self.translation[:, None])),
-                        np.array([0, 0, 0, 1]),
+            return (
+                str(
+                    np.vstack(
+                        (
+                            np.hstack((self.rotation, self.translation[:, None])),
+                            np.array([0, 0, 0, 1]),
+                        )
                     )
                 )
+                .replace("[", "")
+                .replace("]", "")
             )
 
     def normalize_rotation(self) -> None:
