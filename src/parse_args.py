@@ -1,15 +1,7 @@
 import argparse
 
 
-def parse_args() -> argparse.Namespace:
-    """
-    Parses the command line arguments. Also produces the help message.
-    """
-    parser = argparse.ArgumentParser(
-        description="Feature-based registration using SHOT and FPFH descriptors."
-    )
-
-    # i/o
+def add_io_parameters(parser) -> None:
     parser.add_argument(
         "--file_path",
         type=str,
@@ -38,7 +30,9 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disables the progress bars in SHOT computation, RANSAC and ICP.",
     )
-    # keypoint selection
+
+
+def add_keypoint_parameters(parser) -> None:
     parser.add_argument(
         "--keypoint_selection",
         choices=["random", "iterative", "subsampling"],
@@ -64,25 +58,9 @@ def parse_args() -> argparse.Namespace:
         default=30,
         help="Number of neighbors used to compute normals.",
     )
-    parser.add_argument(
-        "--normals_z_threshold",
-        type=float,
-        default=0.8,
-        help="Threshold used in the keypoint selection process on the vertical component of the normals.",
-    )
-    parser.add_argument(
-        "--sphericity_threshold",
-        type=float,
-        default=0.16,
-        help="Threshold used in the keypoint selection process on the sphericity.",
-    )
-    parser.add_argument(
-        "--sphericity_computation_radius",
-        type=float,
-        default=0.3,
-        help="Radius used in the keypoint selection process to compute the sphericity.",
-    )
-    # descriptors
+
+
+def add_descriptor_parameters(parser) -> None:
     parser.add_argument(
         "--descriptor_choice",
         choices=["fpfh", "shot"],
@@ -99,7 +77,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--fpfh_n_bins", type=int, default=5, help="Number of bins in FPFH."
     )
-    # matching
+
+
+def add_matching_parameters(parser) -> None:
     parser.add_argument(
         "--matching_algorithm",
         choices=["simple", "double", "ransac"],
@@ -138,7 +118,15 @@ def parse_args() -> argparse.Namespace:
         default=1,
         help="Threshold on the distance between inliers in the RANSAC method.",
     )
-    # ICP
+
+
+def add_icp_parameters(parser) -> None:
+    parser.add_argument(
+        "--icp_type",
+        choices=["point_to_point", "point_to_plane"],
+        default="point_to_plane",
+        help="Type of ICP performed.",
+    )
     parser.add_argument(
         "--icp_max_iter",
         type=int,
@@ -160,8 +148,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--icp_voxel_size",
         type=float,
-        default=0.8,
+        default=0.001,
         help="Size of the voxels in the subsampling performed to select a subset of the points for the ICP.",
     )
+
+
+def parse_args() -> argparse.Namespace:
+    """
+    Parses the command line arguments. Also produces the help message.
+    """
+    parser = argparse.ArgumentParser(
+        description="Feature-based registration using SHOT or FPFH descriptors."
+    )
+    add_io_parameters(parser.add_argument_group("I/O"))
+    add_keypoint_parameters(parser.add_argument_group("Keypoint selection"))
+    add_descriptor_parameters(parser.add_argument_group("Descriptors"))
+    add_matching_parameters(parser.add_argument_group("Matching and RANSAC"))
+    add_icp_parameters(parser.add_argument_group("ICP"))
 
     return parser.parse_args()
