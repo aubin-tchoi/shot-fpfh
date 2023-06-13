@@ -20,7 +20,6 @@ from .keypoint_selection import (
     select_keypoints_iteratively,
     select_keypoints_subsampling,
     select_keypoints_with_density_threshold,
-    filter_keypoints,
 )
 from .matching import (
     basic_matching,
@@ -120,58 +119,12 @@ class RegistrationPipeline:
                 )
         else:
             raise ValueError("Incorrect keypoint selection algorithm.")
-        print(f"{self.scan_keypoints.shape[0]} descriptors selected on scan out of {self.scan.shape[0]} points.")
-        print(f"{self.ref_keypoints.shape[0]} descriptors selected on ref out of {self.ref.shape[0]} points.")
-
-    def apply_filter_on_keypoints(
-        self,
-        *,
-        normals_z_threshold: float = 0.8,
-        sphericity_threshold: float = 0.16,
-        sphericity_computation_radius: float = 0.3,
-        verbose: bool = True,
-    ) -> None:
-        """
-        Filters the keypoints based on a filter on the normals and on the sphericity.
-
-        Args:
-            normals_z_threshold: Threshold on the value of the z component of the normals. Values beneath this threshold
-            will be kept.
-            sphericity_threshold: Threshold on the value of the sphericity. Values beneath this threshold will be kept.
-            sphericity_computation_radius: Radius used in the computation of the sphericity.
-            verbose: Verbosity level.
-        """
-        print("\n-- Filtering the keypoints --")
-        if self.scan_keypoints is not None and self.scan_keypoints.shape[0] > 0:
-            self.scan_keypoints = filter_keypoints(
-                self.scan_keypoints,
-                self.scan_normals,
-                normals_z_threshold,
-                compute_sphericity(
-                    self.scan[self.scan_keypoints],
-                    self.scan,
-                    sphericity_computation_radius,
-                ),
-                sphericity_threshold,
-                verbose,
-            )
-        else:
-            print("No scan keypoint to filter.")
-        if self.ref_keypoints is not None and self.ref_keypoints.shape[0] > 0:
-            self.ref_keypoints = filter_keypoints(
-                self.ref_keypoints,
-                self.ref_normals,
-                normals_z_threshold,
-                compute_sphericity(
-                    self.ref[self.ref_keypoints],
-                    self.ref,
-                    sphericity_computation_radius,
-                ),
-                sphericity_threshold,
-                verbose,
-            )
-        else:
-            print("No ref keypoint to filter.")
+        print(
+            f"{self.scan_keypoints.shape[0]} descriptors selected on scan out of {self.scan.shape[0]} points."
+        )
+        print(
+            f"{self.ref_keypoints.shape[0]} descriptors selected on ref out of {self.ref.shape[0]} points."
+        )
 
     def compute_shot_descriptor_single_scale(
         self,

@@ -134,13 +134,37 @@ if __name__ == "__main__":
 
         write_ply(
             str(results_folder / f"{file_name}_post_ransac.ply"),
-            [transformation_ransac[pipeline.scan]],
-            ["x", "y", "z"],
+            [
+                np.hstack(
+                    (
+                        np.vstack((transformation_ransac[pipeline.scan], pipeline.ref)),
+                        np.hstack(
+                            (
+                                np.ones(pipeline.scan.shape[0], dtype=bool),
+                                np.zeros(pipeline.ref.shape[0], dtype=bool),
+                            )
+                        )[:, None],
+                    )
+                )
+            ],
+            ["x", "y", "z", "is_scan"],
         )
         write_ply(
             str(results_folder / f"{file_name}_post_icp.ply"),
-            [transformation_icp[pipeline.scan]],
-            ["x", "y", "z"],
+            [
+                np.hstack(
+                    (
+                        np.vstack((transformation_icp[pipeline.scan], pipeline.ref)),
+                        np.hstack(
+                            (
+                                np.ones(pipeline.scan.shape[0], dtype=bool),
+                                np.zeros(pipeline.ref.shape[0], dtype=bool),
+                            )
+                        )[:, None],
+                    )
+                )
+            ],
+            ["x", "y", "z", "is_scan"],
         )
 
     global_timer("\nTotal time spent")

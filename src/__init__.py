@@ -14,7 +14,6 @@ from .keypoint_selection import (
     select_keypoints_iteratively,
     select_keypoints_subsampling,
     select_keypoints_with_density_threshold,
-    filter_keypoints,
 )
 from .matching import (
     basic_matching,
