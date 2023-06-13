@@ -25,7 +25,7 @@ if __name__ == "__main__":
     global_timer = checkpoint()
     timer = checkpoint()
     scan, scan_normals = get_data(
-        args.file_path,
+        args.scan_file_path,
         k=args.normals_computation_k,
         normals_computation_callback=compute_normals,
     )
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     exact_transformation = None
     try:
         exact_transformation = get_transform_from_conf_file(
-            args.conf_file_path, args.file_path, args.ref_file_path
+            args.conf_file_path, args.scan_file_path, args.ref_file_path
         )
     except (FileNotFoundError, KeyError):
         print(
@@ -130,20 +130,22 @@ if __name__ == "__main__":
             "\n -- Writing the aligned points cloud in ply files under './data/results' --"
         )
         (results_folder := Path("./data/results")).mkdir(exist_ok=True, parents=True)
-        file_name = Path(args.file_path).stem
-
+        file_name = (
+            f"{Path(args.scan_file_path).stem}_on_{Path(args.ref_file_path).stem}"
+        )
+        is_scan = np.hstack(
+            (
+                np.ones(pipeline.scan.shape[0], dtype=bool),
+                np.zeros(pipeline.ref.shape[0], dtype=bool),
+            )
+        )[:, None]
         write_ply(
             str(results_folder / f"{file_name}_post_ransac.ply"),
             [
                 np.hstack(
                     (
                         np.vstack((transformation_ransac[pipeline.scan], pipeline.ref)),
-                        np.hstack(
-                            (
-                                np.ones(pipeline.scan.shape[0], dtype=bool),
-                                np.zeros(pipeline.ref.shape[0], dtype=bool),
-                            )
-                        )[:, None],
+                        is_scan,
                     )
                 )
             ],
@@ -155,12 +157,7 @@ if __name__ == "__main__":
                 np.hstack(
                     (
                         np.vstack((transformation_icp[pipeline.scan], pipeline.ref)),
-                        np.hstack(
-                            (
-                                np.ones(pipeline.scan.shape[0], dtype=bool),
-                                np.zeros(pipeline.ref.shape[0], dtype=bool),
-                            )
-                        )[:, None],
+                        is_scan,
                     )
                 )
             ],

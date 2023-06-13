@@ -3,7 +3,7 @@ import argparse
 
 def add_io_parameters(parser) -> None:
     parser.add_argument(
-        "--file_path",
+        "--scan_file_path",
         type=str,
         default="./data/bunny_returned.ply",
         help="Path to the first point cloud to use.",
