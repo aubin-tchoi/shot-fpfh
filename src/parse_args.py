@@ -33,6 +33,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skips saving the registered point cloud as ply files.",
     )
+    parser.add_argument(
+        "--disable_progress_bars",
+        action="store_true",
+        help="Disables the progress bars in SHOT computation, RANSAC and ICP.",
+    )
     # keypoint selection
     parser.add_argument(
         "--keypoint_selection",
@@ -40,6 +45,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="random",
         help="Choice of the algorithm to select keypoints to compute descriptors on.",
+    )
+    parser.add_argument(
+        "--keypoint_voxel_size",
+        type=float,
+        default=1.0,
+        help="Size of the voxels in the subsampling-based keypoint selection",
     )
     parser.add_argument(
         "--normals_z_threshold",
@@ -89,12 +100,49 @@ def parse_args() -> argparse.Namespace:
         default=10,
         help="Threshold multiplier in the threshold-based matching algorithm.",
     )
-    # icp
+    # RANSAC
+    parser.add_argument(
+        "--n_ransac_draws",
+        type=int,
+        default=5000,
+        help="Number of draws in the RANSAC method for descriptors matching.",
+    )
+    parser.add_argument(
+        "--ransac_draw_size",
+        type=int,
+        default=4,
+        help="Size of the draws in the RANSAC method for descriptors matching.",
+    )
+    parser.add_argument(
+        "--ransac_max_inliers_dist",
+        type=float,
+        default=1,
+        help="Threshold on the distance between inliers in the RANSAC method.",
+    )
+    # ICP
+    parser.add_argument(
+        "--icp_max_iter",
+        type=int,
+        default=70,
+        help="Maximum number of iteration in the ICP.",
+    )
+    parser.add_argument(
+        "--icp_rms_threshold",
+        type=float,
+        default=0.01,
+        help="RMS threshold set on the ICP.",
+    )
     parser.add_argument(
         "--icp_d_max",
         type=float,
-        default=1e-2,
+        default=1,
         help="Maximum distance between two inliers in the ICP.",
+    )
+    parser.add_argument(
+        "--icp_voxel_size",
+        type=float,
+        default=0.8,
+        help="Size of the voxels in the subsampling performed to select a subset of the points for the ICP.",
     )
 
     return parser.parse_args()

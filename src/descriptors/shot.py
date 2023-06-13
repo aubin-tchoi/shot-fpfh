@@ -316,6 +316,7 @@ def compute_shot_descriptor(
     n_elevation_bins: int = 2,
     n_radial_bins: int = 2,
     debug_mode: bool = False,
+    disable_progress_bars: bool = True,
 ) -> np.ndarray[np.float64]:
     """
     Computes the SHOT descriptor on a point cloud. This function should not be used in practice and is only kept for
@@ -344,7 +345,12 @@ def compute_shot_descriptor(
         )
     )
 
-    for i, point in tqdm(enumerate(keypoints), desc="SHOT", total=len(keypoints)):
+    for i, point in tqdm(
+        enumerate(keypoints),
+        desc="SHOT",
+        total=len(keypoints),
+        disable=disable_progress_bars,
+    ):
         descriptor = np.zeros(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)
         )

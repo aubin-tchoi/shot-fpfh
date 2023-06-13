@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     pipeline.select_keypoints(
         args.keypoint_selection,
-        neighborhood_size=args.shot_radius / 50,
+        neighborhood_size=args.keypoint_voxel_size,
         min_n_neighbors=args.min_n_neighbors,
     )
     timer("Time spent selecting the key points")
@@ -56,7 +56,10 @@ if __name__ == "__main__":
     timer("Time spent filtering the key points")
 
     pipeline.compute_descriptors(
-        args.descriptor_choice, radius=args.radius, n_bins=args.fpfh_n_bins
+        args.descriptor_choice,
+        radius=args.radius,
+        n_bins=args.fpfh_n_bins,
+        disable_progress_bars=args.disable_progress_bars,
     )
     timer(
         f"Time spent computing the descriptors on the reference point cloud ({ref.shape[0]} points)"
@@ -80,7 +83,13 @@ if __name__ == "__main__":
             f"{correct_matches.sum()} correct matches out of {pipeline.scan_descriptors.shape[0]} descriptors."
         )
 
-    transformation_ransac, inliers_ratio = pipeline.run_ransac()
+    transformation_ransac, inliers_ratio = pipeline.run_ransac(
+        n_draws=args.n_ransac_draws,
+        draw_size=args.ransac_draw_size,
+        max_inliers_distance=args.ransac_max_inliers_dist,
+        exact_transformation=exact_transformation,
+        disable_progress_bar=args.disable_progress_bars,
+    )
     timer("Time spent on RANSAC")
     print(
         f"\nRatio of inliers pre-ICP: {inliers_ratio * 100:.2f}%\nTransformation pre-ICP:"
@@ -89,7 +98,13 @@ if __name__ == "__main__":
     gc.collect()
 
     transformation_icp, distance_to_map, has_icp_converged = pipeline.run_icp(
-        args.icp_type, transformation_ransac, d_max=args.icp_d_max
+        args.icp_type,
+        transformation_ransac,
+        d_max=args.icp_d_max,
+        voxel_size=args.icp_voxel_size,
+        max_iter=args.icp_max_iter,
+        rms_threshold=args.icp_rms_threshold,
+        disable_progress_bar=args.disable_progress_bars,
     )
     overlap, inliers_ratio_post_icp = pipeline.compute_metrics_post_icp(
         transformation_icp,
