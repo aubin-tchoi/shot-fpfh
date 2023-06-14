@@ -9,7 +9,7 @@ from sklearn.neighbors import KDTree
 
 from base_computation import Transformation
 from .analysis import get_incorrect_matches, plot_distance_hists
-from .descriptors import compute_shot_descriptor, compute_fpfh_descriptor
+from .descriptors import ShotMultiprocessor, compute_fpfh_descriptor
 from .icp import icp_point_to_point, icp_point_to_plane
 from .keypoint_selection import (
     select_query_indices_randomly,
@@ -24,7 +24,6 @@ from .matching import (
     threshold_filter,
     ransac_on_matches,
 )
-from .shot_parallelization import ShotMultiprocessor
 
 
 @dataclass
@@ -259,42 +258,82 @@ class RegistrationPipeline:
     def compute_descriptors(
         self,
         radius: float,
-        descriptor_choice: Literal["shot", "fpfh"] = "shot",
+        descriptor_choice: Literal[
+            "fpfh", "shot_single_scale", "shot_bi_scale", "shot_multiscale"
+        ] = "shot_single_scale",
         fpfh_n_bins: int = 5,
-        **kwargs: dict[str, int | None],
+        phi: float = 3.0,
+        rho: float = 10.0,
+        n_scales: int = 2,
+        subsample_support: bool = True,
+        normalize: bool = True,
+        share_local_rfs: bool = True,
+        min_neighborhood_size: int = 100,
+        n_procs: int = 8,
+        disable_progress_bars: bool = False,
+        verbose: bool = True,
+        force_recompute: bool = False,
     ) -> None:
-        if descriptor_choice == "shot":
-            self.scan_descriptors = compute_shot_descriptor(
-                self.scan[self.scan_keypoints],
-                self.scan,
-                self.scan_normals,
+        if descriptor_choice == "shot_single_scale":
+            self.compute_shot_descriptor_single_scale(
                 radius=radius,
-                **kwargs,
+                subsampling_voxel_size=radius / rho if subsample_support else None,
+                normalize=normalize,
+                share_local_rfs=share_local_rfs,
+                min_neighborhood_size=min_neighborhood_size,
+                n_procs=n_procs,
+                disable_progress_bar=disable_progress_bars,
+                verbose=verbose,
+                force_recompute=force_recompute,
             )
-            self.ref_descriptors = compute_shot_descriptor(
-                self.ref[self.ref_keypoints],
-                self.ref,
-                self.ref_normals,
-                radius=radius,
-                **kwargs,
+        elif descriptor_choice == "shot_bi_scale":
+            self.compute_shot_descriptor_bi_scale(
+                local_rf_radius=radius,
+                shot_radius=radius * phi,
+                subsampling_voxel_size=radius / rho if subsample_support else None,
+                normalize=normalize,
+                share_local_rfs=share_local_rfs,
+                min_neighborhood_size=min_neighborhood_size,
+                n_procs=n_procs,
+                disable_progress_bar=disable_progress_bars,
+                verbose=verbose,
+                force_recompute=force_recompute,
+            )
+        elif descriptor_choice == "shot_multi_scale":
+            self.compute_shot_descriptor_multiscale(
+                radii=radius * phi ** np.arange(n_scales),
+                voxel_sizes=radius * phi ** np.arange(n_scales) / rho,
+                normalize=normalize,
+                share_local_rfs=share_local_rfs,
+                min_neighborhood_size=min_neighborhood_size,
+                n_procs=n_procs,
+                disable_progress_bar=disable_progress_bars,
+                verbose=verbose,
+                force_recompute=force_recompute,
             )
         elif descriptor_choice == "fpfh":
-            self.scan_descriptors = compute_fpfh_descriptor(
-                self.scan_keypoints,
-                self.scan,
-                self.scan_normals,
-                radius=radius,
-                n_bins=fpfh_n_bins,
-                **kwargs,
-            )
-            self.ref_descriptors = compute_fpfh_descriptor(
-                self.ref_keypoints,
-                self.ref,
-                self.ref_normals,
-                radius=radius,
-                n_bins=fpfh_n_bins,
-                **kwargs,
-            )
+            if self.scan_descriptors is None or force_recompute:
+                self.scan_descriptors = compute_fpfh_descriptor(
+                    self.scan_keypoints,
+                    self.scan,
+                    self.scan_normals,
+                    radius=radius,
+                    n_bins=fpfh_n_bins,
+                    disable_progress_bars=disable_progress_bars,
+                    verbose=verbose,
+                )
+            if self.ref_descriptors is None or force_recompute:
+                self.ref_descriptors = compute_fpfh_descriptor(
+                    self.ref_keypoints,
+                    self.ref,
+                    self.ref_normals,
+                    radius=radius,
+                    n_bins=fpfh_n_bins,
+                    disable_progress_bars=disable_progress_bars,
+                    verbose=verbose,
+                )
+        else:
+            raise ValueError("Incorrect descriptor choice")
 
     def find_descriptors_matches(
         self,

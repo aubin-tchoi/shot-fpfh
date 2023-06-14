@@ -6,4 +6,4 @@ from .pca_based_descriptors import (
     compute_sphericity,
     compute_normals,
 )
-from .shot import compute_shot_descriptor, compute_single_shot_descriptor, get_local_rf
+from .shot_parallelization import ShotMultiprocessor

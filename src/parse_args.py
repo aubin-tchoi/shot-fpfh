@@ -63,19 +63,42 @@ def add_keypoint_parameters(parser) -> None:
 def add_descriptor_parameters(parser) -> None:
     parser.add_argument(
         "--descriptor_choice",
-        choices=["fpfh", "shot"],
+        choices=["fpfh", "shot_single_scale", "shot_bi_scale", "shot_multiscale"],
         type=str,
-        default="shot",
+        default="shot_single_scale",
         help="Choice of the descriptor.",
     )
     parser.add_argument(
         "--radius",
         type=float,
-        default=1e-1,
+        default=1e-2,
         help="Radius in the neighborhood search when computing either FPFH or SHOT.",
     )
     parser.add_argument(
         "--fpfh_n_bins", type=int, default=5, help="Number of bins in FPFH."
+    )
+    parser.add_argument(
+        "--share_local_rfs",
+        action="store_true",
+        help="Shares the local reference frames between the scales.",
+    )
+    parser.add_argument(
+        "--n_scales",
+        type=int,
+        default=3,
+        help="Number of scales in the multiscale part",
+    )
+    parser.add_argument(
+        "--phi",
+        type=float,
+        default=2,
+        help="Parameter that controls the evolution of the radii in the multiscale part",
+    )
+    parser.add_argument(
+        "--rho",
+        type=float,
+        default=5,
+        help="Parameter that controls the subsampling size of the support point cloud in the multiscale part",
     )
 
 
@@ -115,7 +138,7 @@ def add_matching_parameters(parser) -> None:
     parser.add_argument(
         "--ransac_max_inliers_dist",
         type=float,
-        default=1,
+        default=0.001,
         help="Threshold on the distance between inliers in the RANSAC method.",
     )
 

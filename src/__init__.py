@@ -2,7 +2,7 @@ from .analysis import get_incorrect_matches, plot_distance_hists
 from .descriptors import (
     compute_pca_based_basic_features,
     compute_pca_based_features,
-    compute_shot_descriptor,
+    ShotMultiprocessor,
     compute_fpfh_descriptor,
     compute_normals,
     compute_sphericity,
