@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 
 from base_computation import Transformation
+from utils import write_ply
 from .analysis import get_incorrect_matches, plot_distance_hists
 from .descriptors import ShotMultiprocessor, compute_fpfh_descriptor
 from .icp import icp_point_to_point, icp_point_to_plane
@@ -573,3 +574,24 @@ class RegistrationPipeline:
             ).sum()
             / self.scan_keypoints.shape[0],
         )
+
+    def write_alignments(self, *args: tuple[str, Transformation]) -> None:
+        """
+        Writes a series of alignments in ply files.
+
+        Args:
+            *args: (file_name, transform), the name of the ply write to write into and the rigid transform that defines
+            the alignment.
+        """
+        is_scan = np.hstack(
+            (
+                np.ones(self.scan.shape[0], dtype=bool),
+                np.zeros(self.ref.shape[0], dtype=bool),
+            )
+        )[:, None]
+        for file_name, transform in args:
+            write_ply(
+                file_name,
+                [np.hstack((np.vstack((transform[self.scan], self.ref)), is_scan))],
+                ["x", "y", "z", "is_scan"],
+            )

@@ -2,12 +2,9 @@ import gc
 import warnings
 from pathlib import Path
 
-import numpy as np
-
 from src import (
     parse_args,
     get_data,
-    write_ply,
     checkpoint,
     check_transform,
     get_incorrect_matches,
@@ -133,35 +130,12 @@ if __name__ == "__main__":
         file_name = (
             f"{Path(args.scan_file_path).stem}_on_{Path(args.ref_file_path).stem}"
         )
-        is_scan = np.hstack(
+        pipeline.write_alignments(
             (
-                np.ones(pipeline.scan.shape[0], dtype=bool),
-                np.zeros(pipeline.ref.shape[0], dtype=bool),
-            )
-        )[:, None]
-        write_ply(
-            str(results_folder / f"{file_name}_post_ransac.ply"),
-            [
-                np.hstack(
-                    (
-                        np.vstack((transformation_ransac[pipeline.scan], pipeline.ref)),
-                        is_scan,
-                    )
-                )
-            ],
-            ["x", "y", "z", "is_scan"],
-        )
-        write_ply(
-            str(results_folder / f"{file_name}_post_icp.ply"),
-            [
-                np.hstack(
-                    (
-                        np.vstack((transformation_icp[pipeline.scan], pipeline.ref)),
-                        is_scan,
-                    )
-                )
-            ],
-            ["x", "y", "z", "is_scan"],
+                str(results_folder / f"{file_name}_post_ransac.ply"),
+                transformation_ransac,
+            ),
+            (str(results_folder / f"{file_name}_post_icp.ply"), transformation_icp),
         )
 
     global_timer("\nTotal time spent")
