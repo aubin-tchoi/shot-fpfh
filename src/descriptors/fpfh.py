@@ -18,6 +18,7 @@ def compute_fpfh_descriptor(
     n_bins: int,
     decorrelated: bool = False,
     verbose: bool = True,
+    disable_progress_bars: bool = True,
 ) -> np.ndarray[np.float64]:
     kdtree = KDTree(cloud_points)
 
@@ -32,7 +33,10 @@ def compute_fpfh_descriptor(
     neighborhood_size = 0
 
     for i, point in tqdm(
-        enumerate(cloud_points), desc="SPFH", total=cloud_points.shape[0]
+        enumerate(cloud_points),
+        desc="SPFH",
+        total=cloud_points.shape[0],
+        disable=disable_progress_bars,
     ):
         if neighborhoods[i].shape[0] > 0:
             neighbors = cloud_points[neighborhoods[i]]
@@ -96,6 +100,7 @@ def compute_fpfh_descriptor(
         desc="FPFH",
         total=keypoints_indices.shape[0],
         delay=0.5,
+        disable=disable_progress_bars,
     ):
         with np.errstate(invalid="ignore", divide="ignore"):
             fpfh[i] = (

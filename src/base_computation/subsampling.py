@@ -1,7 +1,9 @@
 import numpy as np
 
 
-def grid_subsampling(points: np.ndarray, voxel_size: float) -> np.ndarray:
+def grid_subsampling(
+    points: np.ndarray[np.float64], voxel_size: float
+) -> np.ndarray[np.int32]:
     """
     Performs a voxel subsampling on the point cloud.
     Keeps the point closest to the barycenter of the points in each voxel.

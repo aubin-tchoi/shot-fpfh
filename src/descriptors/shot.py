@@ -5,7 +5,6 @@ SHOT: Unique signatures of histograms for surface and texture description,
 Computer Vision and Image Understanding,
 """
 import warnings
-from typing import Tuple, Union
 
 import numpy as np
 from sklearn.neighbors import KDTree
@@ -13,7 +12,7 @@ from tqdm import tqdm
 
 
 def get_local_rf(
-    values: Tuple[np.ndarray[np.float64, 3], np.ndarray[np.float64], float],
+    values: tuple[np.ndarray[np.float64, 3], np.ndarray[np.float64], float],
 ) -> np.ndarray[np.float64]:
     """
     Extracts a local reference frame based on the eigendecomposition of the weighted covariance matrix.
@@ -48,8 +47,8 @@ def get_local_rf(
 
 
 def get_azimuth_idx(
-    x: Union[float, np.ndarray[np.float64]], y: Union[float, np.ndarray[np.float64]]
-) -> Union[int, np.ndarray[np.int32]]:
+    x: float | np.ndarray[np.float64], y: float | np.ndarray[np.float64]
+) -> int | np.ndarray[np.int32]:
     """
     Finds the bin index of the azimuth of a point in a division in 8 bins.
     Bins are indexed clockwise, and the first bin is between pi and 3 * pi / 4.
@@ -70,11 +69,11 @@ def get_azimuth_idx(
 
 
 def interpolate_on_adjacent_husks(
-    distance: Union[float, np.ndarray[np.float64]], radius: float
-) -> Tuple[
-    Union[float, np.ndarray[np.float64]],
-    Union[float, np.ndarray[np.float64]],
-    Union[float, np.ndarray[np.float64]],
+    distance: float | np.ndarray[np.float64], radius: float
+) -> tuple[
+    float | np.ndarray[np.float64],
+    float | np.ndarray[np.float64],
+    float | np.ndarray[np.float64],
 ]:
     """
     Interpolates on the adjacent husks.
@@ -91,9 +90,7 @@ def interpolate_on_adjacent_husks(
         Equal to 0 if the point is in the inner bin.
         current_bin: value or array of values to add to the current bin.
     """
-    radial_bin_size = (
-        radius / 2
-    )  # normalized distance between two radial neighbor bins
+    radial_bin_size = radius / 2  # normalized distance between two radial neighbor bins
     # external sphere that is closer to radius / 2 than to the border
     inner_bin = (
         ((distance > radius / 2) & (distance < radius * 3 / 4))
@@ -120,11 +117,11 @@ def interpolate_on_adjacent_husks(
 
 
 def interpolate_vertical_volumes(
-    phi: Union[float, np.ndarray[np.float64]], z: Union[float, np.ndarray[np.float64]]
-) -> Tuple[
-    Union[float, np.ndarray[np.float64]],
-    Union[float, np.ndarray[np.float64]],
-    Union[float, np.ndarray[np.float64]],
+    phi: float | np.ndarray[np.float64], z: float | np.ndarray[np.float64]
+) -> tuple[
+    float | np.ndarray[np.float64],
+    float | np.ndarray[np.float64],
+    float | np.ndarray[np.float64],
 ]:
     """
     Interpolates on the adjacent vertical volumes.
@@ -174,7 +171,7 @@ def interpolate_vertical_volumes(
 
 # noinspection DuplicatedCode
 def compute_single_shot_descriptor(
-    values: Tuple[
+    values: tuple[
         np.ndarray[np.float64, 3],
         np.ndarray[np.float64],
         np.ndarray[np.float64],
@@ -319,6 +316,7 @@ def compute_shot_descriptor(
     n_elevation_bins: int = 2,
     n_radial_bins: int = 2,
     debug_mode: bool = False,
+    disable_progress_bars: bool = True,
 ) -> np.ndarray[np.float64]:
     """
     Computes the SHOT descriptor on a point cloud. This function should not be used in practice and is only kept for
@@ -347,7 +345,12 @@ def compute_shot_descriptor(
         )
     )
 
-    for i, point in tqdm(enumerate(keypoints), desc="SHOT", total=len(keypoints)):
+    for i, point in tqdm(
+        enumerate(keypoints),
+        desc="SHOT",
+        total=len(keypoints),
+        disable=disable_progress_bars,
+    ):
         descriptor = np.zeros(
             (n_cosine_bins, n_azimuth_bins, n_elevation_bins, n_radial_bins)
         )

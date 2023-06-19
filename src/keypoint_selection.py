@@ -1,9 +1,7 @@
-from typing import Optional
-
 import numpy as np
 from sklearn.neighbors import KDTree
 
-from .subsampling import grid_subsampling
+from base_computation import grid_subsampling
 
 # setting a seed
 rng = np.random.default_rng(seed=1)
@@ -67,7 +65,7 @@ def select_keypoints_with_density_threshold(
     points: np.ndarray[np.float64],
     voxel_size: float,
     density_threshold_value: int,
-    density_threshold_radius: Optional[float] = None,
+    density_threshold_radius: float | None = None,
 ) -> np.ndarray[np.int32]:
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
@@ -121,35 +119,3 @@ def select_keypoints_with_density_threshold(
         last_seen += nb_pts_per_voxel[idx]
 
     return np.array(sub_sampled_points_idx)
-
-
-def filter_keypoints(
-    keypoints: np.ndarray[np.int32],
-    normals: np.ndarray[np.float64],
-    normals_z_threshold: float = 0.8,
-    sphericity: Optional[np.ndarray[np.float64]] = None,
-    sphericity_threshold: float = 0.16,
-    verbose: bool = True,
-) -> np.ndarray[np.int32]:
-    """
-    Filters keypoints found on the ground based on the value of the z-coordinate of their normals.
-    """
-    if sphericity is not None and sphericity.shape[0] == normals.shape[0]:
-        mask = (np.abs(normals[keypoints, 2]) < normals_z_threshold) & (
-            sphericity < sphericity_threshold
-        )
-        if verbose:
-            print(f"Filtering keypoints based on sphericity and normals ", end="")
-    elif sphericity is not None and sphericity.shape[0] == keypoints.shape[0]:
-        mask = (np.abs(normals[keypoints, 2]) < normals_z_threshold) & (
-            sphericity < sphericity_threshold
-        )
-        if verbose:
-            print(f"Filtering keypoints based on sphericity and normals ", end="")
-    else:
-        mask = normals[keypoints, 2] < normals_z_threshold
-        if verbose:
-            print(f"Filtering keypoints based on normals only ", end="")
-    if verbose:
-        print(f"({mask.sum()} keypoints out of {keypoints.shape[0]}).")
-    return keypoints[mask]

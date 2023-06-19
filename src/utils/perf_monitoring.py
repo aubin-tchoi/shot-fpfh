@@ -1,3 +1,6 @@
+"""
+Utility functions to monitor the performances of a program.
+"""
 from functools import wraps
 from time import perf_counter
 from typing import Callable
@@ -56,7 +59,7 @@ def runtime_alert(time_limit: int) -> Callable[[], Callable]:
     return inner_func
 
 
-def checkpoint(time_ref: float = perf_counter()) -> Callable[..., None]:
+def checkpoint(time_ref: float | None = None) -> Callable[..., None]:
     """
     Closure that stores a time checkpoint that is updated at every call.
     Each call prints the time elapsed since the last checkpoint with a custom message.
@@ -66,6 +69,8 @@ def checkpoint(time_ref: float = perf_counter()) -> Callable[..., None]:
     Returns:
         The closure.
     """
+    if time_ref is None:
+        time_ref = perf_counter()
 
     def _closure(message: str = "") -> None:
         """
@@ -93,7 +98,8 @@ class Checkpoint:
         Initializes a new timer.
 
         Args:
-             _time_reference: The time origin of the checkpoint. If omitted, will be set to the date of the call.
+             _time_reference: The time origin of the checkpoint.
+             If omitted, it will be set to the date of the call.
         """
         self._time_reference = _time_reference
 

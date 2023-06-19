@@ -8,11 +8,12 @@ packages = [{include = "shot_fpfh"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numpy = "^1.24.2"
+numpy = "^1.24.3"
 scikit-learn = "^1.2.2"
 matplotlib = "^3.7.1"
 tqdm = "^4.65.0"
-fonttools = "^4.39.0"
+fonttools = "^4.40.0"
+mypy = "^1.3.0"
 
 [build-system]
 requires = ["poetry-core"]

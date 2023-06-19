@@ -1,6 +1,5 @@
-from typing import Tuple
-
 import numpy as np
+from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
 from .transformation import Transformation
@@ -30,23 +29,33 @@ def solver_point_to_point(
     return Transformation(rotation, translation)
 
 
+def solver_point_to_plane(
+    scan: np.ndarray[np.float64],
+    ref: np.ndarray[np.float64],
+    normals_ref: np.ndarray[np.float64],
+) -> Transformation:
+    g = np.hstack((np.cross(scan, normals_ref), normals_ref))
+    h = np.einsum(
+        "ij, ij->i",
+        ref - scan,
+        normals_ref,
+    )
+    # np.linalg.solve relies on a Cholesky decomposition when A is a symmetric definite positive matrix
+    solution = np.linalg.solve(g.T @ g, g.T @ h)
+    return Transformation(
+        Rotation.from_euler("xyz", solution[:3]).as_matrix(), solution[3:6]
+    )
+
+
 def compute_point_to_point_error(
     scan: np.ndarray[np.float64],
     ref: np.ndarray[np.float64],
     transformation: Transformation,
-) -> Tuple[float, np.ndarray[np.float64]]:
+) -> tuple[float, np.ndarray[np.float64]]:
     """
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.
     """
-    transformed_data = transformation.transform(scan)
-    neighbors = KDTree(ref).query(transformed_data, return_distance=False).squeeze()
-    return (
-        np.sqrt(
-            np.sum(
-                (transformed_data - ref[neighbors]) ** 2,
-                axis=0,
-            ).mean()
-        ),
-        transformed_data,
-    )
+    transformed_data = transformation[scan]
+    distances = KDTree(ref).query(transformed_data)[0].squeeze()
+    return np.sqrt((distances**2).mean()), transformed_data

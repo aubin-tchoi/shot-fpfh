@@ -1,18 +1,16 @@
 """
 Implementation of local PCA on point clouds for normal computations and feature extraction (PCA-based descriptors).
 """
-from typing import Optional, Tuple, List
-
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.neighbors import KDTree
 
-from ..perf_monitoring import timeit
+from utils.perf_monitoring import timeit
 
 
 def pca(
     points: np.ndarray[np.float64],
-) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     """
     Computes the eigenvalues and eigenvectors of the covariance matrix that describes a point cloud.
     """
@@ -28,9 +26,9 @@ def compute_normals(
     query_points: np.ndarray[np.float64],
     cloud_points: np.ndarray[np.float64],
     *,
-    k: Optional[int] = None,
-    radius: Optional[float] = None,
-    pre_computed_normals: Optional[np.ndarray[np.float64]] = None,
+    k: int | None = None,
+    radius: float | None = None,
+    pre_computed_normals: np.ndarray[np.float64] | None = None,
 ) -> np.ndarray[np.float64]:
     """
     Computes PCA-based normals on a point cloud.
@@ -76,11 +74,11 @@ def compute_local_pca_with_moments(
     query_points: np.ndarray[np.float64],
     cloud_points: np.ndarray[np.float64],
     nghbrd_search: str = "spherical",
-    radius: Optional[float] = None,
-    k: Optional[int] = None,
+    radius: float | None = None,
+    k: int | None = None,
     verbose: bool = False,
-) -> Tuple[
-    np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64], List[int]
+) -> tuple[
+    np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64], list[int]
 ]:
     """
     Computes PCA on the neighborhoods of all query_points in cloud_points.
@@ -148,7 +146,7 @@ def compute_pca_based_basic_features(
     query_points: np.ndarray[np.float64],
     cloud_points: np.ndarray[np.float64],
     radius: float,
-) -> Tuple[
+) -> tuple[
     np.ndarray[np.float64],
     np.ndarray[np.float64],
     np.ndarray[np.float64],

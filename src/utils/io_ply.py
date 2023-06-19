@@ -2,10 +2,9 @@
 Utility functions to read/write .ply files
 """
 import sys
-from typing import Tuple, Protocol
+from typing import Protocol
 
 import numpy as np
-from .descriptors import compute_normals
 
 # defining PLY types
 ply_dtypes = dict(
@@ -13,7 +12,6 @@ ply_dtypes = dict(
         (b"int8", "i1"),
         (b"char", "i1"),
         (b"uint8", "u1"),
-        (b"uchar", "b1"),
         (b"uchar", "u1"),
         (b"int16", "i2"),
         (b"short", "i2"),
@@ -263,31 +261,35 @@ def get_data(
     recompute_normals: bool = True,
     k: int | None = None,
     radius: float | None = None,
-    compute_normals: NormalsComputationCallback = compute_normals,
-) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+    normals_computation_callback: NormalsComputationCallback | None = None,
+) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
     data = read_ply(data_path)
 
     points = np.vstack((data["x"], data["y"], data["z"])).T
     if "nx" in data.dtype.fields.keys():
         normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
         if recompute_normals:
-            print(f"Recomputing normals using function {compute_normals.__name__}")
-            normals = compute_normals(
+            print(
+                f"Recomputing normals using function {normals_computation_callback.__name__}"
+            )
+            normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals
             )
     elif "n_x" in data.dtype.fields.keys():
         normals = np.vstack((data["n_x"], data["n_y"], data["n_z"])).T
         if recompute_normals:
-            print(f"Recomputing normals using function {compute_normals.__name__}")
-            normals = compute_normals(
+            print(
+                f"Recomputing normals using function {normals_computation_callback.__name__}"
+            )
+            normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals
             )
     else:
-        if compute_normals is None:
+        if normals_computation_callback is None:
             raise ValueError(
                 "The function used to compute normals needs to be specified as the ply file does not contain normals."
             )
-        normals = compute_normals(points, points, k=k, radius=radius)
+        normals = normals_computation_callback(points, points, k=k, radius=radius)
 
     if remove_duplicates:
         filtered_indexes = np.unique(
