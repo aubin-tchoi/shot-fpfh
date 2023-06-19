@@ -57,13 +57,5 @@ def compute_point_to_point_error(
     by the rotation and the translation.
     """
     transformed_data = transformation[scan]
-    neighbors = KDTree(ref).query(transformed_data, return_distance=False).squeeze()
-    return (
-        np.sqrt(
-            np.sum(
-                (transformed_data - ref[neighbors]) ** 2,
-                axis=0,
-            ).mean()
-        ),
-        transformed_data,
-    )
+    distances = KDTree(ref).query(transformed_data)[0].squeeze()
+    return np.sqrt((distances**2).mean()), transformed_data

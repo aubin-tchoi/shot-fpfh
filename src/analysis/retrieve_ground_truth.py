@@ -56,12 +56,5 @@ def check_transform(
     Describes the covering between the two point clouds knowing the exact transformation between the two.
     """
     aligned_points = transformation[scan]
-    plt.hist(
-        np.linalg.norm(
-            aligned_points
-            - ref[KDTree(ref).query(aligned_points, return_distance=False).squeeze()],
-            axis=1,
-        ),
-        bins=100,
-    )
+    plt.hist(KDTree(ref).query(aligned_points)[0].squeeze(), bins=100)
     plt.show()

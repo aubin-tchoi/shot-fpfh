@@ -553,16 +553,7 @@ class RegistrationPipeline:
                 A mask array where True values indicate inliers.
             """
             return (
-                np.linalg.norm(
-                    scan_points
-                    - ref_points[
-                        KDTree(ref_points)
-                        .query(scan_points, return_distance=False)
-                        .squeeze()
-                    ],
-                    axis=1,
-                )
-                <= distance_threshold
+                KDTree(ref_points).query(scan_points)[0].squeeze() <= distance_threshold
             )
 
         return (
