@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.neighbors import KDTree
 
-from base_computation import Transformation
+from shot_fpfh.base_computation import Transformation
 
 
 def get_incorrect_matches(

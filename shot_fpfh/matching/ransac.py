@@ -4,7 +4,7 @@ RANSAC iterations applied to matches between descriptors to find the transformat
 import numpy as np
 from tqdm import tqdm
 
-from base_computation import solver_point_to_point, Transformation
+from shot_fpfh.base_computation import solver_point_to_point, Transformation
 
 # setting a seed
 rng = np.random.default_rng(seed=72)

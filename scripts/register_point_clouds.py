@@ -2,8 +2,8 @@ import gc
 import warnings
 from pathlib import Path
 
-from src import (
-    parse_args,
+from parse_args import parse_args
+from shot_fpfh import (
     get_data,
     checkpoint,
     check_transform,
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         print(
             "\n -- Writing the aligned points cloud in ply files under './data/results' --"
         )
-        (results_folder := Path("./data/results")).mkdir(exist_ok=True, parents=True)
+        (results_folder := Path("../data/results")).mkdir(exist_ok=True, parents=True)
         file_name = (
             f"{Path(args.scan_file_path).stem}_on_{Path(args.ref_file_path).stem}"
         )

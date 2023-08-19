@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
-from base_computation import grid_subsampling
+from shot_fpfh.base_computation import grid_subsampling
 from .shot import get_local_rf, compute_single_shot_descriptor
 
 
