@@ -1,8 +1,9 @@
+import argparse
 import gc
 import warnings
 from pathlib import Path
 
-from parse_args import parse_args
+from scripts.parse_args import parse_args
 from shot_fpfh import (
     get_data,
     checkpoint,
@@ -16,9 +17,14 @@ from shot_fpfh import (
 warnings.filterwarnings("ignore")
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(args: argparse.Namespace = parse_args()) -> None:
+    """
+    Runs a feature-based registration between two point clouds.
+    Outputs useful information in stdout and writes ply files with the registered point clouds.
 
+    Args:
+        args: Arguments parsed from command-line using argparse.
+    """
     global_timer = checkpoint()
     timer = checkpoint()
     scan, scan_normals = get_data(
@@ -139,3 +145,7 @@ if __name__ == "__main__":
         )
 
     global_timer("\nTotal time spent")
+
+
+if __name__ == "__main__":
+    main()
