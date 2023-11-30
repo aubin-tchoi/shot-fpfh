@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from base_computation import (
+from shot_fpfh.base_computation import (
     solver_point_to_point,
     solver_point_to_plane,
     Transformation,

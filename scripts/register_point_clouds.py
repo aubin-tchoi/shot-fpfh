@@ -1,9 +1,10 @@
+import argparse
 import gc
 import warnings
 from pathlib import Path
 
-from src import (
-    parse_args,
+from scripts.parse_args import parse_args
+from shot_fpfh import (
     get_data,
     checkpoint,
     check_transform,
@@ -16,9 +17,14 @@ from src import (
 warnings.filterwarnings("ignore")
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(args: argparse.Namespace = parse_args()) -> None:
+    """
+    Runs a feature-based registration between two point clouds.
+    Outputs useful information in stdout and writes ply files with the registered point clouds.
 
+    Args:
+        args: Arguments parsed from command-line using argparse.
+    """
     global_timer = checkpoint()
     timer = checkpoint()
     scan, scan_normals = get_data(
@@ -126,7 +132,7 @@ if __name__ == "__main__":
         print(
             "\n -- Writing the aligned points cloud in ply files under './data/results' --"
         )
-        (results_folder := Path("./data/results")).mkdir(exist_ok=True, parents=True)
+        (results_folder := Path("../data/results")).mkdir(exist_ok=True, parents=True)
         file_name = (
             f"{Path(args.scan_file_path).stem}_on_{Path(args.ref_file_path).stem}"
         )
@@ -139,3 +145,7 @@ if __name__ == "__main__":
         )
 
     global_timer("\nTotal time spent")
+
+
+if __name__ == "__main__":
+    main()

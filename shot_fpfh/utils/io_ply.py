@@ -270,7 +270,7 @@ def get_data(
         normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
         if recompute_normals:
             print(
-                f"Recomputing normals using function {normals_computation_callback.__name__}"
+                f"Recomputing normals using function {normals_computation_callback.__name__}."
             )
             normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals
@@ -279,7 +279,7 @@ def get_data(
         normals = np.vstack((data["n_x"], data["n_y"], data["n_z"])).T
         if recompute_normals:
             print(
-                f"Recomputing normals using function {normals_computation_callback.__name__}"
+                f"Recomputing normals using function {normals_computation_callback.__name__}."
             )
             normals = normals_computation_callback(
                 points, points, k=k, radius=radius, pre_computed_normals=normals

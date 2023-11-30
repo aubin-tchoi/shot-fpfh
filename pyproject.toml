@@ -18,3 +18,6 @@ mypy = "^1.3.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+register_point_clouds = "scripts.register_point_clouds:main"
