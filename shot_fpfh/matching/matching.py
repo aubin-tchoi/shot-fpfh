@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 
 import numpy as np
@@ -36,7 +37,8 @@ def match_descriptors(
     """
     # Euclidian norm
     if len(scan_descriptors.shape) == 2:
-        print("\n-- Matching descriptors based on Euclidian-norm proximity --")
+        logging.info("")
+        logging.info("-- Matching descriptors based on Euclidian-norm proximity --")
         # empty descriptors (ones that did not have a density high enough in the computation of SHOT) are left out
         non_empty_descriptors = np.any(scan_descriptors, axis=1).nonzero()[0]
         non_empty_ref_descriptors = np.any(ref_descriptors, axis=1).nonzero()[0]
@@ -67,11 +69,14 @@ def match_descriptors(
             ).sum() >= n_min_matches:
                 filtered_indices = final_mask
             elif verbose:
-                print("Too few reciprocal matches, keeping non-reciprocal matches.")
+                logging.warning(
+                    "Too few reciprocal matches, keeping non-reciprocal matches."
+                )
 
     # minimum of the Euclidian norm on each scale
     else:
-        print("\n-- Matching descriptors based on infinite-norm proximity --")
+        logging.info("")
+        logging.info("-- Matching descriptors based on infinite-norm proximity --")
         max_val = 1000
         n_scales, n_points, descriptor_size = scan_descriptors.shape
         n_points_ref = ref_descriptors.shape[1]
@@ -114,7 +119,9 @@ def match_descriptors(
         ) & (distances < max_val)
 
         if filtered_indices.sum() < n_min_matches and filter_nonreciprocal:
-            print("Too few reciprocal matches, keeping non-reciprocal matches.")
+            logging.warning(
+                "Too few reciprocal matches, keeping non-reciprocal matches."
+            )
             # noinspection PyArgumentEqualDefault
             return match_descriptors(
                 scan_descriptors,
@@ -129,7 +136,7 @@ def match_descriptors(
         non_empty_ref_descriptors = np.arange(n_points_ref)
 
     if verbose:
-        print(
+        logging.info(
             f"Kept {filtered_indices.sum()} matches out of {scan_descriptors.shape[-2]} descriptors."
         )
 
@@ -204,7 +211,7 @@ def double_matching_with_rejects(
     )
 
     if verbose:
-        print(
+        logging.info(
             f"Kept {mask.sum()} matches out of {scan_descriptors.shape[0]} descriptors."
         )
 

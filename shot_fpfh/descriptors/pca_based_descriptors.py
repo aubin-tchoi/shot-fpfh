@@ -2,6 +2,8 @@
 Implementation of local PCA on point clouds for normal computations and feature extraction (PCA-based descriptors).
 """
 
+import logging
+
 import numpy as np
 import numpy.typing as npt
 from matplotlib import pyplot as plt
@@ -104,7 +106,7 @@ def compute_local_pca_with_moments(
     neighborhood_sizes = [neighborhood.shape[0] for neighborhood in neighborhoods]
     # checking the sizes of the neighborhoods and plotting the histogram
     if nghbrd_search.lower() == "spherical" and verbose:
-        print(
+        logging.info(
             f"Average size of neighborhoods: {np.mean(neighborhood_sizes):.4f}\n"
             f"Standard deviation: {np.std(neighborhood_sizes):.4f}\n"
             f"Min: {np.min(neighborhood_sizes)}, max: {np.max(neighborhood_sizes)}\n"

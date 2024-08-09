@@ -1,5 +1,6 @@
 import argparse
 import gc
+import logging
 import warnings
 from pathlib import Path
 
@@ -46,7 +47,7 @@ def main(args: argparse.Namespace | None = None) -> None:
             args.conf_file_path, args.scan_file_path, args.ref_file_path
         )
     except (FileNotFoundError, KeyError):
-        print(
+        logging.warning(
             f"Conf file not found or incorrect under {args.conf_file_path}, ignoring it."
         )
 
@@ -90,7 +91,7 @@ def main(args: argparse.Namespace | None = None) -> None:
             pipeline.ref[pipeline.ref_keypoints][pipeline.matches[1]],
             exact_transformation,
         )
-        print(
+        logging.info(
             f"{correct_matches.sum()} correct matches out of {pipeline.scan_descriptors.shape[0]} descriptors."
         )
 
@@ -102,7 +103,7 @@ def main(args: argparse.Namespace | None = None) -> None:
         disable_progress_bar=args.disable_progress_bars,
     )
     timer("Time spent on RANSAC")
-    print(
+    logging.info(
         f"\nRatio of inliers pre-ICP: {inliers_ratio * 100:.2f}%\nTransformation pre-ICP:"
     )
     print(transformation_ransac)
@@ -122,7 +123,7 @@ def main(args: argparse.Namespace | None = None) -> None:
         args.icp_d_max,
     )
     timer("Time spent on ICP")
-    print(
+    logging.info(
         f"\nRMS error on the ICP:  {distance_to_map:.4f} (has converged: {'OK'[::has_icp_converged * 2 - 1]})."
         f"\nProportion of inliers: {inliers_ratio_post_icp * 100:.2f}%"
         f"\nPercentage of overlap: {overlap * 100:.2f}%"
@@ -131,8 +132,9 @@ def main(args: argparse.Namespace | None = None) -> None:
     print(transformation_icp)
 
     if not args.disable_ply_writing:
-        print(
-            "\n -- Writing the aligned points cloud in ply files under './data/results' --"
+        logging.info("")
+        logging.info(
+            " -- Writing the aligned points cloud in ply files under './data/results' --"
         )
         (results_folder := Path("../data/results")).mkdir(exist_ok=True, parents=True)
         file_name = (

@@ -2,6 +2,8 @@
 RANSAC iterations applied to matches between descriptors to find the transformation that aligns best the keypoints.
 """
 
+import logging
+
 import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
@@ -65,14 +67,14 @@ def ransac_on_matches(
             ).sum()
             if best_n_inliers is None or n_inliers > best_n_inliers:
                 if verbose:
-                    print(
+                    logging.info(
                         f"Updating best n_inliers from {best_n_inliers} to {n_inliers}"
                     )
                 best_n_inliers = n_inliers
                 best_transform = transformation
             pbar.set_description(f"RANSAC - current best n_inliers: {best_n_inliers}")
         except KeyboardInterrupt:
-            print("RANSAC interrupted by user.")
+            logging.info("RANSAC interrupted by user.")
             break
 
     best_transform.normalize_rotation()

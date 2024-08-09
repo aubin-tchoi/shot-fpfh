@@ -1,6 +1,8 @@
 """
 Utility functions to monitor the performances of a program.
 """
+
+import logging
 from functools import wraps
 from time import perf_counter
 from typing import Callable
@@ -22,7 +24,7 @@ def timeit(func: Callable) -> Callable:
         result = func(*args, **kwargs)
         end_time = perf_counter()
         total_time = end_time - start_time
-        print(f"Function {func.__name__} took {total_time:.2f} seconds")
+        logging.info(f"Function {func.__name__} took {total_time:.2f} seconds")
         return result
 
     return timeit_wrapper
@@ -49,7 +51,7 @@ def runtime_alert(time_limit: int) -> Callable[[Callable], Callable]:
             result = func(*args, **kwargs)
             total_time = perf_counter() - start_time
             if total_time > time_limit:
-                print(
+                logging.warning(
                     f"Function {func.__name__} took more than {time_limit:.2f} seconds ({total_time:.2f} seconds)"
                 )
             return result
@@ -82,7 +84,7 @@ def checkpoint(time_ref: float | None = None) -> Callable[..., None]:
         nonlocal time_ref
         current_time = perf_counter()
         if message != "":
-            print(f"{message}: {current_time - time_ref:.2f} seconds")
+            logging.info(f"{message}: {current_time - time_ref:.2f} seconds")
         time_ref = current_time
 
     return _closure
@@ -112,5 +114,5 @@ class Checkpoint:
         """
         current_time = perf_counter()
         if message != "":
-            print(f"{message}: {current_time - self._time_reference}")
+            logging.info(f"{message}: {current_time - self._time_reference}")
         self._time_reference = current_time

@@ -2,6 +2,7 @@
 Utility functions to read/write .ply files
 """
 
+import logging
 import sys
 from typing import Protocol
 
@@ -152,10 +153,10 @@ def write_ply(filename, field_list, field_names):
     )
     for i, field in enumerate(field_list):
         if field is None:
-            print("WRITE_PLY ERROR: a field is None")
+            logging.warning("WRITE_PLY ERROR: a field is None")
             return False
         elif field.ndim > 2:
-            print("WRITE_PLY ERROR: a field have more than 2 dimensions")
+            logging.warning("WRITE_PLY ERROR: a field have more than 2 dimensions")
             return False
         elif field.ndim < 2:
             field_list[i] = field.reshape(-1, 1)
@@ -163,13 +164,13 @@ def write_ply(filename, field_list, field_names):
     # check all fields have the same number of data
     n_points = [field.shape[0] for field in field_list]
     if not np.all(np.equal(n_points, n_points[0])):
-        print("wrong field dimensions")
+        logging.warning("wrong field dimensions")
         return False
 
     # check if field_names and field_list have the same number of columns
     n_fields = np.sum([field.shape[1] for field in field_list])
     if n_fields != len(field_names):
-        print("wrong number of field names")
+        logging.warning("wrong number of field names")
         return False
 
     # add the extension if not there
@@ -269,7 +270,7 @@ def get_data(
     if "nx" in data.dtype.fields.keys():
         normals = np.vstack((data["nx"], data["ny"], data["nz"])).T
         if recompute_normals:
-            print(
+            logging.info(
                 f"Recomputing normals using function {normals_computation_callback.__name__}."
             )
             normals = normals_computation_callback(
@@ -278,7 +279,7 @@ def get_data(
     elif "n_x" in data.dtype.fields.keys():
         normals = np.vstack((data["n_x"], data["n_y"], data["n_z"])).T
         if recompute_normals:
-            print(
+            logging.info(
                 f"Recomputing normals using function {normals_computation_callback.__name__}."
             )
             normals = normals_computation_callback(

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from multiprocessing import Pool
 from types import TracebackType
@@ -159,7 +160,7 @@ class ShotMultiprocessor:
             else None
         )
         if self.verbose and support is not None:
-            print(
+            logging.info(
                 f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
                 f"(voxel size: {subsampling_voxel_size:.2f})"
             )
@@ -212,7 +213,7 @@ class ShotMultiprocessor:
             else None
         )
         if self.verbose and support is not None:
-            print(
+            logging.info(
                 f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
                 f"(voxel size: {subsampling_voxel_size})"
             )
@@ -275,7 +276,7 @@ class ShotMultiprocessor:
                 else None
             )
             if self.verbose and support is not None:
-                print(
+                logging.info(
                     f"Keeping a support of {support.shape[0]} points out of {point_cloud.shape[0]} "
                     f"(voxel size: {voxel_sizes[scale]})"
                 )
