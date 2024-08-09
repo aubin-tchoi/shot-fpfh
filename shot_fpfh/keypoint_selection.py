@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import grid_subsampling
+from shot_fpfh.core import grid_subsampling
 
 # setting a seed
 rng = np.random.default_rng(seed=1)

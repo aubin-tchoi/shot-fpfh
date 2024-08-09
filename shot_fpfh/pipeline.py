@@ -10,7 +10,7 @@ import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
 from shot_fpfh.analysis import get_incorrect_matches, plot_distance_hists
-from shot_fpfh.base_computation import RigidTransform
+from shot_fpfh.core import RigidTransform
 from shot_fpfh.descriptors import ShotMultiprocessor, compute_fpfh_descriptor
 from shot_fpfh.icp import icp_point_to_plane, icp_point_to_point
 from shot_fpfh.keypoint_selection import (

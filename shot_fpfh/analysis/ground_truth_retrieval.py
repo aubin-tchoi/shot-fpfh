@@ -4,7 +4,7 @@ import numpy.typing as npt
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import RigidTransform
+from shot_fpfh.core import RigidTransform
 
 
 def quaternion_to_rotation_matrix(

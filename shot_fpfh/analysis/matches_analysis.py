@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import RigidTransform
+from shot_fpfh.core import RigidTransform
 
 
 def get_incorrect_matches(

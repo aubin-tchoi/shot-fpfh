@@ -7,7 +7,7 @@ import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from shot_fpfh.base_computation import (
+from shot_fpfh.core import (
     RigidTransform,
     grid_subsampling,
     solver_point_to_plane,

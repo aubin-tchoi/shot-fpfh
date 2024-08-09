@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from shot_fpfh.base_computation import RigidTransform, solver_point_to_point
+from shot_fpfh.core import RigidTransform, solver_point_to_point
 
 # setting a seed
 rng = np.random.default_rng(seed=72)
