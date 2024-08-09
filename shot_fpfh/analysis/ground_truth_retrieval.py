@@ -21,7 +21,7 @@ def read_conf_file(file_path: str) -> dict[str, Transformation]:
     """
     Reads a .conf file from the Stanford 3D Scanning Repository to output the (translation, rotation) for each ply file.
     """
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         transformations = {
             line_values[1].replace(".ply", ""): Transformation(
                 quaternion_to_rotation_matrix([float(val) for val in line_values[5:]]),

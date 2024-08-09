@@ -59,14 +59,10 @@ def icp_point_to_point_with_sampling(
             # keeping the inlier only
             inlier_points = points_aligned_subset[distances.squeeze() <= d_max]
             neighbors = neighbors[distances <= d_max]
-            transformation = solver_point_to_point(
-                inlier_points,
-                ref[neighbors],
-            )
+            transformation = solver_point_to_point(inlier_points, ref[neighbors])
             rms = np.sqrt(
-                np.sum(
-                    np.linalg.norm(inlier_points - ref[neighbors], axis=1) ** 2,
-                    axis=0,
+                (np.linalg.norm(inlier_points - ref[neighbors], axis=1) ** 2).sum(
+                    axis=0
                 )
             )
             pbar.set_description(f"ICP - current RMS: {rms:.2f}")
@@ -115,14 +111,10 @@ def icp_point_to_point(
 
             # finding the transformation between the inliers and their neighbors
             transformation_aligned_to_ref = solver_point_to_point(
-                inliers,
-                ref[inliers_neighbors],
+                inliers, ref[inliers_neighbors]
             )
             rms = np.sqrt(
-                np.sum(
-                    np.linalg.norm(inliers - ref[neighbors], axis=1) ** 2,
-                    axis=0,
-                )
+                (np.linalg.norm(inliers - ref[neighbors], axis=1) ** 2).sum(axis=0)
             )
             transformation_icp = transformation_aligned_to_ref @ transformation_icp
             progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
