@@ -28,7 +28,7 @@ def timeit(func: Callable) -> Callable:
     return timeit_wrapper
 
 
-def runtime_alert(time_limit: int) -> Callable[[], Callable]:
+def runtime_alert(time_limit: int) -> Callable[[Callable], Callable]:
     """
     Decorator with argument.
     """
