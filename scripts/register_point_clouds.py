@@ -4,6 +4,8 @@ import logging
 import warnings
 from pathlib import Path
 
+import coloredlogs
+
 from scripts.parse_args import parse_args
 from shot_fpfh import (
     RegistrationPipeline,
@@ -26,6 +28,21 @@ def main(args: argparse.Namespace | None = None) -> None:
     Args:
         args: Arguments parsed from command-line using argparse.
     """
+    coloredlogs.install(
+        level="INFO",
+        fmt="%(asctime)s %(levelname)-7s %(message)s",
+        field_styles={
+            "levelname": {"color": "black", "bright": True, "bold": True},
+            "asctime": {"color": "magenta", "bright": True},
+        },
+        level_styles={
+            "info": {"color": "cyan", "faint": True},
+            "critical": {"color": "red", "bold": True},
+            "error": {"color": "red", "bright": True},
+            "warning": {"color": "yellow", "bright": True},
+        },
+    )
+
     args = args or parse_args()
 
     global_timer = checkpoint()
