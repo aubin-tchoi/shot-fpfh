@@ -8,13 +8,13 @@ import numpy as np
 import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import Transformation
+from shot_fpfh.base_computation import RigidTransform
 
 
 def get_incorrect_matches(
     scan: npt.NDArray[np.float64],
     ref: npt.NDArray[np.float64],
-    exact_transformation: Transformation,
+    exact_transformation: RigidTransform,
 ) -> np.ndarray[bool]:
     """
     Finds the incorrect matches between two sets of points.
@@ -35,7 +35,7 @@ def get_incorrect_matches(
 def plot_distance_hists(
     scan: npt.NDArray[np.float64],
     ref: npt.NDArray[np.float64],
-    exact_transformation: Transformation,
+    exact_transformation: RigidTransform,
     scan_descriptors: npt.NDArray[np.float64],
     ref_descriptors: npt.NDArray[np.float64],
 ) -> None:

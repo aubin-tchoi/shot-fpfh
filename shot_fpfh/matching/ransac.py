@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from shot_fpfh.base_computation import Transformation, solver_point_to_point
+from shot_fpfh.base_computation import RigidTransform, solver_point_to_point
 
 # setting a seed
 rng = np.random.default_rng(seed=72)
@@ -22,7 +22,7 @@ def ransac_on_matches(
     distance_threshold: float = 1,
     verbose: bool = False,
     disable_progress_bar: bool = False,
-) -> tuple[float, Transformation]:
+) -> tuple[float, RigidTransform]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
@@ -33,7 +33,7 @@ def ransac_on_matches(
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
     best_n_inliers: int | None = None
-    best_transform: Transformation | None = None
+    best_transform: RigidTransform | None = None
 
     for _ in (
         pbar := tqdm(

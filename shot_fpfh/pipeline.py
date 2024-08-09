@@ -10,7 +10,7 @@ import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
 from shot_fpfh.analysis import get_incorrect_matches, plot_distance_hists
-from shot_fpfh.base_computation import Transformation
+from shot_fpfh.base_computation import RigidTransform
 from shot_fpfh.descriptors import ShotMultiprocessor, compute_fpfh_descriptor
 from shot_fpfh.icp import icp_point_to_plane, icp_point_to_point
 from shot_fpfh.keypoint_selection import (
@@ -399,7 +399,7 @@ class RegistrationPipeline:
     def analyze_matches(
         self,
         matching_algorithm: Literal["simple", "double", "threshold"],
-        exact_transformation: Transformation,
+        exact_transformation: RigidTransform,
     ) -> None:
         """
         Analyzes the matches based on prior knowledge on the exact transformation between the two point clouds.
@@ -433,9 +433,9 @@ class RegistrationPipeline:
         n_draws: int = 10000,
         draw_size: int = 4,
         max_inliers_distance: float = 2,
-        exact_transformation: Transformation | None = None,
+        exact_transformation: RigidTransform | None = None,
         disable_progress_bar: bool = False,
-    ) -> tuple[Transformation, float]:
+    ) -> tuple[RigidTransform, float]:
         """
         Performs RANSAC-like draws to match the descriptors.
 
@@ -472,14 +472,14 @@ class RegistrationPipeline:
     def run_icp(
         self,
         icp_type: Literal["point_to_point", "point_to_plane"],
-        transformation_init: Transformation,
+        transformation_init: RigidTransform,
         *,
         d_max: float,
         voxel_size: float = 0.2,
         max_iter: int = 100,
         rms_threshold: float = 1e-2,
         disable_progress_bar: bool = False,
-    ) -> tuple[Transformation, float, bool]:
+    ) -> tuple[RigidTransform, float, bool]:
         """
         Performs an ICP for fine registration between scan and ref.
 
@@ -525,7 +525,7 @@ class RegistrationPipeline:
 
     def compute_metrics_post_icp(
         self,
-        transformation_icp: Transformation,
+        transformation_icp: RigidTransform,
         distance_threshold: float,
     ) -> tuple[float, float]:
         """
@@ -568,7 +568,7 @@ class RegistrationPipeline:
             / self.scan_keypoints.shape[0],
         )
 
-    def write_alignments(self, *args: tuple[str, Transformation]) -> None:
+    def write_alignments(self, *args: tuple[str, RigidTransform]) -> None:
         """
         Writes a series of alignments in ply files.
 

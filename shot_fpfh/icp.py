@@ -8,7 +8,7 @@ from sklearn.neighbors import KDTree
 from tqdm import trange
 
 from shot_fpfh.base_computation import (
-    Transformation,
+    RigidTransform,
     grid_subsampling,
     solver_point_to_plane,
     solver_point_to_point,
@@ -79,13 +79,13 @@ def icp_point_to_point_with_sampling(
 def icp_point_to_point(
     scan: npt.NDArray[np.float64],
     ref: npt.NDArray[np.float64],
-    transformation_init: Transformation,
+    transformation_init: RigidTransform,
     d_max: float,
     voxel_size: float = 0.2,
     max_iter: int = 100,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> tuple[Transformation, float, bool]:
+) -> tuple[RigidTransform, float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -132,13 +132,13 @@ def icp_point_to_plane(
     scan: npt.NDArray[np.float64],
     ref: npt.NDArray[np.float64],
     ref_normals: npt.NDArray[np.float64],
-    transformation_init: Transformation,
+    transformation_init: RigidTransform,
     d_max: float,
     voxel_size: float = 0.2,
     max_iter: int = 50,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> tuple[Transformation, float, bool]:
+) -> tuple[RigidTransform, float, bool]:
     """
     Point to plane ICP.
     More robust to point clouds of variable densities where the plane estimations by the normals are good.
