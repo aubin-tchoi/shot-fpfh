@@ -1,30 +1,32 @@
 """
 Generic pipeline with open choices for the algorithms used to select keypoints and filter matches.
 """
+
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
 from shot_fpfh.analysis import get_incorrect_matches, plot_distance_hists
-from shot_fpfh.base_computation import Transformation
+from shot_fpfh.core import RigidTransform
 from shot_fpfh.descriptors import ShotMultiprocessor, compute_fpfh_descriptor
-from shot_fpfh.icp import icp_point_to_point, icp_point_to_plane
+from shot_fpfh.helpers import write_ply
+from shot_fpfh.icp import icp_point_to_plane, icp_point_to_point
 from shot_fpfh.keypoint_selection import (
-    select_query_indices_randomly,
     select_keypoints_iteratively,
     select_keypoints_subsampling,
     select_keypoints_with_density_threshold,
+    select_query_indices_randomly,
 )
 from shot_fpfh.matching import (
     basic_matching,
     double_matching_with_rejects,
     match_descriptors,
-    threshold_filter,
     ransac_on_matches,
+    threshold_filter,
 )
-from shot_fpfh.utils import write_ply
 
 
 @dataclass
@@ -34,16 +36,16 @@ class RegistrationPipeline:
     Allows for a selection among a variety of algorithms for keypoint selection, matching, and ICP.
     """
 
-    scan: np.ndarray[np.float64]
-    scan_normals: np.ndarray[np.float64]
-    ref: np.ndarray[np.float64]
-    ref_normals: np.ndarray[np.float64]
+    scan: npt.NDArray[np.float64]
+    scan_normals: npt.NDArray[np.float64]
+    ref: npt.NDArray[np.float64]
+    ref_normals: npt.NDArray[np.float64]
 
     scan_keypoints: np.ndarray[np.int32] | None = None
     ref_keypoints: np.ndarray[np.int32] | None = None
 
-    scan_descriptors: np.ndarray[np.float64] | None = None
-    ref_descriptors: np.ndarray[np.float64] | None = None
+    scan_descriptors: npt.NDArray[np.float64] | None = None
+    ref_descriptors: npt.NDArray[np.float64] | None = None
 
     matches: tuple[np.ndarray[np.int32], np.ndarray[np.int32]] | None = None
 
@@ -172,7 +174,7 @@ class RegistrationPipeline:
         subsampling_voxel_size: float | None = None,
         force_recompute: bool = False,
         **shot_multiprocessor_config: bool | int,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
         reference frames and the other one for the computation of the descriptor.
@@ -211,12 +213,12 @@ class RegistrationPipeline:
 
     def compute_shot_descriptor_multiscale(
         self,
-        radii: list[float] | np.ndarray[np.float64],
-        voxel_sizes: list[float] | np.ndarray[np.float64] | None = None,
-        weights: list[float] | np.ndarray[np.float64] | None = None,
+        radii: list[float] | npt.NDArray[np.float64],
+        voxel_sizes: list[float] | npt.NDArray[np.float64] | None = None,
+        weights: list[float] | npt.NDArray[np.float64] | None = None,
         force_recompute: bool = False,
         **shot_multiprocessor_config: bool | int,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on multiple scales.
         Normals are expected to be normalized to 1.
@@ -397,7 +399,7 @@ class RegistrationPipeline:
     def analyze_matches(
         self,
         matching_algorithm: Literal["simple", "double", "threshold"],
-        exact_transformation: Transformation,
+        exact_transformation: RigidTransform,
     ) -> None:
         """
         Analyzes the matches based on prior knowledge on the exact transformation between the two point clouds.
@@ -431,9 +433,9 @@ class RegistrationPipeline:
         n_draws: int = 10000,
         draw_size: int = 4,
         max_inliers_distance: float = 2,
-        exact_transformation: Transformation | None = None,
+        exact_transformation: RigidTransform | None = None,
         disable_progress_bar: bool = False,
-    ) -> tuple[Transformation, float]:
+    ) -> tuple[RigidTransform, float]:
         """
         Performs RANSAC-like draws to match the descriptors.
 
@@ -470,14 +472,14 @@ class RegistrationPipeline:
     def run_icp(
         self,
         icp_type: Literal["point_to_point", "point_to_plane"],
-        transformation_init: Transformation,
+        transformation_init: RigidTransform,
         *,
         d_max: float,
         voxel_size: float = 0.2,
         max_iter: int = 100,
         rms_threshold: float = 1e-2,
         disable_progress_bar: bool = False,
-    ) -> tuple[Transformation, float, bool]:
+    ) -> tuple[RigidTransform, float, bool]:
         """
         Performs an ICP for fine registration between scan and ref.
 
@@ -523,7 +525,7 @@ class RegistrationPipeline:
 
     def compute_metrics_post_icp(
         self,
-        transformation_icp: Transformation,
+        transformation_icp: RigidTransform,
         distance_threshold: float,
     ) -> tuple[float, float]:
         """
@@ -539,7 +541,7 @@ class RegistrationPipeline:
         points_aligned_icp = transformation_icp[self.scan]
 
         def get_inlier_points(
-            scan_points: np.ndarray[np.float64], ref_points: np.ndarray[np.float64]
+            scan_points: npt.NDArray[np.float64], ref_points: npt.NDArray[np.float64]
         ) -> np.ndarray[bool]:
             """
             Retrieves a mask on an array of points that indicates whether a point has a neighbor in ref within a certain
@@ -566,7 +568,7 @@ class RegistrationPipeline:
             / self.scan_keypoints.shape[0],
         )
 
-    def write_alignments(self, *args: tuple[str, Transformation]) -> None:
+    def write_alignments(self, *args: tuple[str, RigidTransform]) -> None:
         """
         Writes a series of alignments in ply files.
 

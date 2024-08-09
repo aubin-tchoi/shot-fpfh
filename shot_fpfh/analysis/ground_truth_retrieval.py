@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import Transformation
+from shot_fpfh.core import RigidTransform
 
 
 def quaternion_to_rotation_matrix(
@@ -16,13 +17,13 @@ def quaternion_to_rotation_matrix(
     return Rotation.from_quat([q0, q1, q2, q3]).as_matrix().squeeze()
 
 
-def read_conf_file(file_path: str) -> dict[str, Transformation]:
+def read_conf_file(file_path: str) -> dict[str, RigidTransform]:
     """
     Reads a .conf file from the Stanford 3D Scanning Repository to output the (translation, rotation) for each ply file.
     """
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         transformations = {
-            line_values[1].replace(".ply", ""): Transformation(
+            line_values[1].replace(".ply", ""): RigidTransform(
                 quaternion_to_rotation_matrix([float(val) for val in line_values[5:]]),
                 np.array([float(val) for val in line_values[2:5]]),
             )
@@ -34,7 +35,7 @@ def read_conf_file(file_path: str) -> dict[str, Transformation]:
 
 def get_transform_from_conf_file(
     conf_file_name: str, scan_file_name: str, ref_file_name: str
-) -> Transformation:
+) -> RigidTransform:
     """
     Outputs the rotation and translation that send the data corresponding to file_name onto the data corresponding to
     ref_file_name using a config that contains rotations and translations to send them to a common coordinate system.
@@ -48,9 +49,9 @@ def get_transform_from_conf_file(
 
 
 def check_transform(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    transformation: Transformation,
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    transformation: RigidTransform,
 ) -> None:
     """
     Describes the covering between the two point clouds knowing the exact transformation between the two.

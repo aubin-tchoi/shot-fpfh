@@ -1,13 +1,14 @@
 import numpy as np
+import numpy.typing as npt
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
-from .transformation import Transformation
+from .rigid_transform import RigidTransform
 
 
 def solver_point_to_point(
-    scan: np.ndarray[np.float64], ref: np.ndarray[np.float64]
-) -> Transformation:
+    scan: npt.NDArray[np.float64], ref: npt.NDArray[np.float64]
+) -> RigidTransform:
     """
     Computes the least-squares best-fit transform that maps corresponding points data to ref.
     """
@@ -26,14 +27,14 @@ def solver_point_to_point(
 
     translation = ref_barycenter - rotation.dot(data_barycenter)
 
-    return Transformation(rotation, translation)
+    return RigidTransform(rotation, translation)
 
 
 def solver_point_to_plane(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    normals_ref: np.ndarray[np.float64],
-) -> Transformation:
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    normals_ref: npt.NDArray[np.float64],
+) -> RigidTransform:
     g = np.hstack((np.cross(scan, normals_ref), normals_ref))
     h = np.einsum(
         "ij, ij->i",
@@ -42,16 +43,16 @@ def solver_point_to_plane(
     )
     # np.linalg.solve relies on a Cholesky decomposition when A is a symmetric definite positive matrix
     solution = np.linalg.solve(g.T @ g, g.T @ h)
-    return Transformation(
+    return RigidTransform(
         Rotation.from_euler("xyz", solution[:3]).as_matrix(), solution[3:6]
     )
 
 
 def compute_point_to_point_error(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    transformation: Transformation,
-) -> tuple[float, np.ndarray[np.float64]]:
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    transformation: RigidTransform,
+) -> tuple[float, npt.NDArray[np.float64]]:
     """
     Computes the RMS error between a reference point cloud and data that went through the rigid transformation described
     by the rotation and the translation.

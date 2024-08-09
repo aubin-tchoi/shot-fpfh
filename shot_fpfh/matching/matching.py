@@ -1,14 +1,16 @@
 from typing import Callable
 
 import numpy as np
+import numpy.typing as npt
 from scipy.spatial.distance import cdist
 
 
 def match_descriptors(
-    scan_descriptors: np.ndarray[np.float64],
-    ref_descriptors: np.ndarray[np.float64],
-    filter_callback: Callable[[np.ndarray[np.float64], ...], np.ndarray[bool]]
-    | None = None,
+    scan_descriptors: npt.NDArray[np.float64],
+    ref_descriptors: npt.NDArray[np.float64],
+    filter_callback: (
+        Callable[[npt.NDArray[np.float64], ...], np.ndarray[bool]] | None
+    ) = None,
     filter_nonreciprocal: bool = False,
     verbose: bool = True,
     n_min_matches: int = 100,
@@ -138,7 +140,7 @@ def match_descriptors(
 
 
 def basic_matching(
-    scan_descriptors: np.ndarray[np.float64], ref_descriptors: np.ndarray[np.float64]
+    scan_descriptors: npt.NDArray[np.float64], ref_descriptors: npt.NDArray[np.float64]
 ) -> tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:
     """
     Matching strategy that matches each descriptor with its nearest neighbor in the feature space.
@@ -161,8 +163,8 @@ def basic_matching(
 
 
 def double_matching_with_rejects(
-    scan_descriptors: np.ndarray[np.float64],
-    ref_descriptors: np.ndarray[np.float64],
+    scan_descriptors: npt.NDArray[np.float64],
+    ref_descriptors: npt.NDArray[np.float64],
     threshold: float,
     verbose: bool = True,
 ) -> tuple[np.ndarray[np.int32], np.ndarray[np.int32]]:

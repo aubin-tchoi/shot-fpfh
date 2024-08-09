@@ -1,10 +1,12 @@
 """
 RANSAC iterations applied to matches between descriptors to find the transformation that aligns best the keypoints.
 """
+
 import numpy as np
+import numpy.typing as npt
 from tqdm import tqdm
 
-from shot_fpfh.base_computation import solver_point_to_point, Transformation
+from shot_fpfh.core import RigidTransform, solver_point_to_point
 
 # setting a seed
 rng = np.random.default_rng(seed=72)
@@ -13,14 +15,14 @@ rng = np.random.default_rng(seed=72)
 def ransac_on_matches(
     scan_descriptors_indices: np.ndarray[np.int32],
     ref_descriptors_indices: np.ndarray[np.int32],
-    scan_keypoints: np.ndarray[np.float64],
-    ref_keypoints: np.ndarray[np.float64],
+    scan_keypoints: npt.NDArray[np.float64],
+    ref_keypoints: npt.NDArray[np.float64],
     n_draws: int = 10000,
     draw_size: int = 4,
     distance_threshold: float = 1,
     verbose: bool = False,
     disable_progress_bar: bool = False,
-) -> tuple[float, Transformation]:
+) -> tuple[float, RigidTransform]:
     """
     Matching strategy that establishes point-to-point correspondences between descriptors and performs RANSAC-type
     iterations to find the best rigid transformation between the two point clouds based on random picks of the matches.
@@ -31,7 +33,7 @@ def ransac_on_matches(
         Rotation and translation of the rigid transform to perform on the point cloud.
     """
     best_n_inliers: int | None = None
-    best_transform: Transformation | None = None
+    best_transform: RigidTransform | None = None
 
     for _ in (
         pbar := tqdm(

@@ -1,14 +1,15 @@
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import grid_subsampling
+from shot_fpfh.core import grid_subsampling
 
 # setting a seed
 rng = np.random.default_rng(seed=1)
 
 
 def select_keypoints_iteratively(
-    points: np.ndarray[np.float64], radius: float
+    points: npt.NDArray[np.float64], radius: float
 ) -> np.ndarray[np.int32]:
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
@@ -31,7 +32,7 @@ def select_keypoints_iteratively(
 
 
 def select_keypoints_subsampling(
-    points: np.ndarray[np.float64], voxel_size: float
+    points: npt.NDArray[np.float64], voxel_size: float
 ) -> np.ndarray[np.int32]:
     """
     Selects a subset of the points to create a set of key points on which descriptors will be computed.
@@ -44,7 +45,7 @@ def select_keypoints_subsampling(
 
 
 def select_keypoints_randomly(
-    points: np.ndarray[np.float64], n_feature_points: int
+    points: npt.NDArray[np.float64], n_feature_points: int
 ) -> np.ndarray[np.int32]:
     """
     Selects a random subset of the points to create a set of key points on which descriptors will be computed.
@@ -62,7 +63,7 @@ def select_query_indices_randomly(
 
 
 def select_keypoints_with_density_threshold(
-    points: np.ndarray[np.float64],
+    points: npt.NDArray[np.float64],
     voxel_size: float,
     density_threshold_value: int,
     density_threshold_radius: float | None = None,

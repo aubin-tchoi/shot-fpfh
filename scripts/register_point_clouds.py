@@ -5,19 +5,19 @@ from pathlib import Path
 
 from scripts.parse_args import parse_args
 from shot_fpfh import (
-    get_data,
-    checkpoint,
+    RegistrationPipeline,
     check_transform,
+    checkpoint,
+    compute_normals,
+    get_data,
     get_incorrect_matches,
     get_transform_from_conf_file,
-    RegistrationPipeline,
-    compute_normals,
 )
 
 warnings.filterwarnings("ignore")
 
 
-def main(args: argparse.Namespace = parse_args()) -> None:
+def main(args: argparse.Namespace | None = None) -> None:
     """
     Runs a feature-based registration between two point clouds.
     Outputs useful information in stdout and writes ply files with the registered point clouds.
@@ -25,6 +25,8 @@ def main(args: argparse.Namespace = parse_args()) -> None:
     Args:
         args: Arguments parsed from command-line using argparse.
     """
+    args = args or parse_args()
+
     global_timer = checkpoint()
     timer = checkpoint()
     scan, scan_normals = get_data(
@@ -80,7 +82,7 @@ def main(args: argparse.Namespace = parse_args()) -> None:
         reject_threshold=args.reject_threshold,
         threshold_multiplier=args.threshold_multiplier,
     )
-    timer(f"Time spent finding matches between the descriptors")
+    timer("Time spent finding matches between the descriptors")
 
     if exact_transformation is not None:
         correct_matches = get_incorrect_matches(

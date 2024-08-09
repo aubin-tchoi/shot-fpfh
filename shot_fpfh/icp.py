@@ -1,27 +1,29 @@
 """
 Implementation of the ICP method.
 """
+
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
-from shot_fpfh.base_computation import (
-    solver_point_to_point,
-    solver_point_to_plane,
-    Transformation,
+from shot_fpfh.core import (
+    RigidTransform,
     grid_subsampling,
+    solver_point_to_plane,
+    solver_point_to_point,
 )
 
 
 def icp_point_to_point_with_sampling(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
     d_max: float,
     max_iter: int = 100,
     rms_threshold: float = 1e-2,
     sampling_limit: int = 100,
     disable_progress_bar: bool = False,
-) -> tuple[np.ndarray[np.float64], float, bool]:
+) -> tuple[npt.NDArray[np.float64], float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -57,14 +59,10 @@ def icp_point_to_point_with_sampling(
             # keeping the inlier only
             inlier_points = points_aligned_subset[distances.squeeze() <= d_max]
             neighbors = neighbors[distances <= d_max]
-            transformation = solver_point_to_point(
-                inlier_points,
-                ref[neighbors],
-            )
+            transformation = solver_point_to_point(inlier_points, ref[neighbors])
             rms = np.sqrt(
-                np.sum(
-                    np.linalg.norm(inlier_points - ref[neighbors], axis=1) ** 2,
-                    axis=0,
+                (np.linalg.norm(inlier_points - ref[neighbors], axis=1) ** 2).sum(
+                    axis=0
                 )
             )
             pbar.set_description(f"ICP - current RMS: {rms:.2f}")
@@ -79,15 +77,15 @@ def icp_point_to_point_with_sampling(
 
 
 def icp_point_to_point(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    transformation_init: Transformation,
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    transformation_init: RigidTransform,
     d_max: float,
     voxel_size: float = 0.2,
     max_iter: int = 100,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> tuple[Transformation, float, bool]:
+) -> tuple[RigidTransform, float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -113,14 +111,10 @@ def icp_point_to_point(
 
             # finding the transformation between the inliers and their neighbors
             transformation_aligned_to_ref = solver_point_to_point(
-                inliers,
-                ref[inliers_neighbors],
+                inliers, ref[inliers_neighbors]
             )
             rms = np.sqrt(
-                np.sum(
-                    np.linalg.norm(inliers - ref[neighbors], axis=1) ** 2,
-                    axis=0,
-                )
+                (np.linalg.norm(inliers - ref[neighbors], axis=1) ** 2).sum(axis=0)
             )
             transformation_icp = transformation_aligned_to_ref @ transformation_icp
             progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
@@ -135,16 +129,16 @@ def icp_point_to_point(
 
 
 def icp_point_to_plane(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    ref_normals: np.ndarray[np.float64],
-    transformation_init: Transformation,
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    ref_normals: npt.NDArray[np.float64],
+    transformation_init: RigidTransform,
     d_max: float,
     voxel_size: float = 0.2,
     max_iter: int = 50,
     rms_threshold: float = 1e-2,
     disable_progress_bar: bool = False,
-) -> tuple[Transformation, float, bool]:
+) -> tuple[RigidTransform, float, bool]:
     """
     Point to plane ICP.
     More robust to point clouds of variable densities where the plane estimations by the normals are good.

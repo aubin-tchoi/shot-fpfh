@@ -1,10 +1,12 @@
 """
 Utility functions to read/write .ply files
 """
+
 import sys
 from typing import Protocol
 
 import numpy as np
+import numpy.typing as npt
 
 # defining PLY types
 ply_dtypes = dict(
@@ -146,9 +148,7 @@ def write_ply(filename, field_list, field_names):
 
     # Format list input to the right form
     field_list = (
-        list(field_list)
-        if (type(field_list) == list or type(field_list) == tuple)
-        else list((field_list,))
+        list(field_list) if (isinstance(field_list, (list, tuple))) else [field_list]
     )
     for i, field in enumerate(field_list):
         if field is None:
@@ -245,13 +245,13 @@ class NormalsComputationCallback(Protocol):
 
     def __call__(
         self,
-        query_points: np.ndarray[np.float64],
-        cloud_points: np.ndarray[np.float64],
+        query_points: npt.NDArray[np.float64],
+        cloud_points: npt.NDArray[np.float64],
         *,
         k: int | None = None,
         radius: float | None = None,
-        pre_computed_normals: np.ndarray[np.float64] | None = None,
-    ) -> np.ndarray[np.float64]:
+        pre_computed_normals: npt.NDArray[np.float64] | None = None,
+    ) -> npt.NDArray[np.float64]:
         ...
 
 
@@ -262,7 +262,7 @@ def get_data(
     k: int | None = None,
     radius: float | None = None,
     normals_computation_callback: NormalsComputationCallback | None = None,
-) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     data = read_ply(data_path)
 
     points = np.vstack((data["x"], data["y"], data["z"])).T

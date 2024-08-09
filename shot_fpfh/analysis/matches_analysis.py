@@ -5,15 +5,16 @@ the point clouds to register.
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
-from shot_fpfh.base_computation import Transformation
+from shot_fpfh.core import RigidTransform
 
 
 def get_incorrect_matches(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    exact_transformation: Transformation,
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    exact_transformation: RigidTransform,
 ) -> np.ndarray[bool]:
     """
     Finds the incorrect matches between two sets of points.
@@ -32,11 +33,11 @@ def get_incorrect_matches(
 
 
 def plot_distance_hists(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    exact_transformation: Transformation,
-    scan_descriptors: np.ndarray[np.float64],
-    ref_descriptors: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    exact_transformation: RigidTransform,
+    scan_descriptors: npt.NDArray[np.float64],
+    ref_descriptors: npt.NDArray[np.float64],
 ) -> None:
     """
     Validates the double_matching_with_rejects by plotting histograms of the ratio between the distances to the nearest

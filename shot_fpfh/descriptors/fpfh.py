@@ -6,20 +6,21 @@ Fast Point Feature Histograms (FPFH) for 3D registration,
 """
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 
 def compute_fpfh_descriptor(
     keypoints_indices: np.ndarray[np.int32],
-    cloud_points: np.ndarray[np.float64],
-    normals: np.ndarray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
+    normals: npt.NDArray[np.float64],
     radius: float,
     n_bins: int,
     decorrelated: bool = False,
     verbose: bool = True,
     disable_progress_bars: bool = True,
-) -> np.ndarray[np.float64]:
+) -> npt.NDArray[np.float64]:
     kdtree = KDTree(cloud_points)
 
     neighborhoods, distances = kdtree.query_radius(

@@ -1,7 +1,7 @@
 # 🌐 SHOT / 📊 FPFH descriptors on 3D Point Clouds
 
 This repository contains resources to compute SHOT and FPFH, two 3D descriptors on point clouds.
-The main script `main.py` contains a pipeline consisting of the following steps:
+The main script `register_point_clouds.py` contains a pipeline consisting of the following steps:
 
 - **Data retrieving**: binary `.ply` files are supported. Two point clouds will be loaded.
 - **Query point selection**: an algorithm taken from `query_points_selection.py` will be used to select a subset of
@@ -15,7 +15,8 @@ The main script `main.py` contains a pipeline consisting of the following steps:
 
 ## 💬 Basic usage
 
-Run `python main.py --help` to display a help message specifying the arguments of this main script.
+Install the project using `poetry install` and run `poetry run register_point_clouds --help`
+to display a help message specifying the arguments of this main script.
 This script will run the steps specified above in the same order, each argument finding a role in one of the steps.
 
 ## 📦 Dependency management

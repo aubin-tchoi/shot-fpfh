@@ -4,16 +4,18 @@ Samuele Salti, Federico Tombari, Luigi Di Stefano,
 SHOT: Unique signatures of histograms for surface and texture description,
 Computer Vision and Image Understanding,
 """
+
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 
 def get_local_rf(
-    values: tuple[np.ndarray[np.float64, 3], np.ndarray[np.float64], float],
-) -> np.ndarray[np.float64]:
+    values: tuple[np.ndarray[np.float64, 3], npt.NDArray[np.float64], float],
+) -> npt.NDArray[np.float64]:
     """
     Extracts a local reference frame based on the eigendecomposition of the weighted covariance matrix.
     Arguments are given in a tuple to allow for multiprocessing using multiprocessing.Pool.
@@ -47,7 +49,7 @@ def get_local_rf(
 
 
 def get_azimuth_idx(
-    x: float | np.ndarray[np.float64], y: float | np.ndarray[np.float64]
+    x: float | npt.NDArray[np.float64], y: float | npt.NDArray[np.float64]
 ) -> int | np.ndarray[np.int32]:
     """
     Finds the bin index of the azimuth of a point in a division in 8 bins.
@@ -69,11 +71,11 @@ def get_azimuth_idx(
 
 
 def interpolate_on_adjacent_husks(
-    distance: float | np.ndarray[np.float64], radius: float
+    distance: float | npt.NDArray[np.float64], radius: float
 ) -> tuple[
-    float | np.ndarray[np.float64],
-    float | np.ndarray[np.float64],
-    float | np.ndarray[np.float64],
+    float | npt.NDArray[np.float64],
+    float | npt.NDArray[np.float64],
+    float | npt.NDArray[np.float64],
 ]:
     """
     Interpolates on the adjacent husks.
@@ -117,11 +119,11 @@ def interpolate_on_adjacent_husks(
 
 
 def interpolate_vertical_volumes(
-    phi: float | np.ndarray[np.float64], z: float | np.ndarray[np.float64]
+    phi: float | npt.NDArray[np.float64], z: float | npt.NDArray[np.float64]
 ) -> tuple[
-    float | np.ndarray[np.float64],
-    float | np.ndarray[np.float64],
-    float | np.ndarray[np.float64],
+    float | npt.NDArray[np.float64],
+    float | npt.NDArray[np.float64],
+    float | npt.NDArray[np.float64],
 ]:
     """
     Interpolates on the adjacent vertical volumes.
@@ -173,8 +175,8 @@ def interpolate_vertical_volumes(
 def compute_single_shot_descriptor(
     values: tuple[
         np.ndarray[np.float64, 3],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
         float,
         np.ndarray[np.float64, (3, 3)],
         bool,
@@ -306,9 +308,9 @@ def compute_single_shot_descriptor(
 
 # noinspection DuplicatedCode
 def compute_shot_descriptor(
-    keypoints: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
-    normals: np.ndarray[np.float64],
+    keypoints: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
+    normals: npt.NDArray[np.float64],
     radius: float,
     min_neighborhood_size: int = 10,
     n_cosine_bins: int = 11,
@@ -317,7 +319,7 @@ def compute_shot_descriptor(
     n_radial_bins: int = 2,
     debug_mode: bool = False,
     disable_progress_bars: bool = True,
-) -> np.ndarray[np.float64]:
+) -> npt.NDArray[np.float64]:
     """
     Computes the SHOT descriptor on a point cloud. This function should not be used in practice and is only kept for
     debugging purposes. Use the methods from class ShotMultiprocessor instead.

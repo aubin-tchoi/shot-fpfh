@@ -1,8 +1,9 @@
 import numpy as np
+import numpy.typing as npt
 
 
 def grid_subsampling(
-    points: np.ndarray[np.float64], voxel_size: float
+    points: npt.NDArray[np.float64], voxel_size: float
 ) -> np.ndarray[np.int32]:
     """
     Performs a voxel subsampling on the point cloud.
