@@ -5,8 +5,8 @@ from .analysis import (
     plot_distance_hists,
 )
 from .descriptors import compute_normals
+from .helpers import checkpoint, get_data, read_ply, timeit, write_ply
 from .pipeline import RegistrationPipeline
-from .utils import checkpoint, get_data, read_ply, timeit, write_ply
 
 __all__ = [
     "get_transform_from_conf_file",
