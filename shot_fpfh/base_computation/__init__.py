@@ -1,4 +1,4 @@
-from .rigid_transform import (
+from .solvers import (
     compute_point_to_point_error,
     solver_point_to_plane,
     solver_point_to_point,
