@@ -17,7 +17,7 @@ from shot_fpfh import (
 warnings.filterwarnings("ignore")
 
 
-def main(args: argparse.Namespace = parse_args()) -> None:
+def main(args: argparse.Namespace | None = None) -> None:
     """
     Runs a feature-based registration between two point clouds.
     Outputs useful information in stdout and writes ply files with the registered point clouds.
@@ -25,6 +25,8 @@ def main(args: argparse.Namespace = parse_args()) -> None:
     Args:
         args: Arguments parsed from command-line using argparse.
     """
+    args = args or parse_args()
+
     global_timer = checkpoint()
     timer = checkpoint()
     scan, scan_normals = get_data(
