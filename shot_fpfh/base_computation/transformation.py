@@ -2,7 +2,6 @@
 Base class to handle 4x4 transformation.
 """
 import numpy as np
-
 from scipy.spatial.transform import Rotation
 
 

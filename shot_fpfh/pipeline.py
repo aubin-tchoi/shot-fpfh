@@ -10,19 +10,19 @@ from sklearn.neighbors import KDTree
 from shot_fpfh.analysis import get_incorrect_matches, plot_distance_hists
 from shot_fpfh.base_computation import Transformation
 from shot_fpfh.descriptors import ShotMultiprocessor, compute_fpfh_descriptor
-from shot_fpfh.icp import icp_point_to_point, icp_point_to_plane
+from shot_fpfh.icp import icp_point_to_plane, icp_point_to_point
 from shot_fpfh.keypoint_selection import (
-    select_query_indices_randomly,
     select_keypoints_iteratively,
     select_keypoints_subsampling,
     select_keypoints_with_density_threshold,
+    select_query_indices_randomly,
 )
 from shot_fpfh.matching import (
     basic_matching,
     double_matching_with_rejects,
     match_descriptors,
-    threshold_filter,
     ransac_on_matches,
+    threshold_filter,
 )
 from shot_fpfh.utils import write_ply
 

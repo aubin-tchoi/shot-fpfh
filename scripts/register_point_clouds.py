@@ -5,13 +5,13 @@ from pathlib import Path
 
 from scripts.parse_args import parse_args
 from shot_fpfh import (
-    get_data,
-    checkpoint,
+    RegistrationPipeline,
     check_transform,
+    checkpoint,
+    compute_normals,
+    get_data,
     get_incorrect_matches,
     get_transform_from_conf_file,
-    RegistrationPipeline,
-    compute_normals,
 )
 
 warnings.filterwarnings("ignore")
@@ -80,7 +80,7 @@ def main(args: argparse.Namespace = parse_args()) -> None:
         reject_threshold=args.reject_threshold,
         threshold_multiplier=args.threshold_multiplier,
     )
-    timer(f"Time spent finding matches between the descriptors")
+    timer("Time spent finding matches between the descriptors")
 
     if exact_transformation is not None:
         correct_matches = get_incorrect_matches(

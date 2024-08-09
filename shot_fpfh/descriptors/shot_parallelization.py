@@ -7,7 +7,8 @@ from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 from shot_fpfh.base_computation import grid_subsampling
-from .shot import get_local_rf, compute_single_shot_descriptor
+
+from .shot import compute_single_shot_descriptor, get_local_rf
 
 
 @dataclass

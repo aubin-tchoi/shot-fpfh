@@ -6,10 +6,10 @@ from sklearn.neighbors import KDTree
 from tqdm import trange
 
 from shot_fpfh.base_computation import (
-    solver_point_to_point,
-    solver_point_to_plane,
     Transformation,
     grid_subsampling,
+    solver_point_to_plane,
+    solver_point_to_point,
 )
 
 
