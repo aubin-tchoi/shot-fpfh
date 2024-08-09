@@ -1,7 +1,9 @@
 """
 Implementation of local PCA on point clouds for normal computations and feature extraction (PCA-based descriptors).
 """
+
 import numpy as np
+import numpy.typing as npt
 from matplotlib import pyplot as plt
 from sklearn.neighbors import KDTree
 
@@ -9,8 +11,8 @@ from shot_fpfh.utils import timeit
 
 
 def pca(
-    points: np.ndarray[np.float64],
-) -> tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+    points: npt.NDArray[np.float64],
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Computes the eigenvalues and eigenvectors of the covariance matrix that describes a point cloud.
     """
@@ -23,13 +25,13 @@ def pca(
 
 
 def compute_normals(
-    query_points: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
+    query_points: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
     *,
     k: int | None = None,
     radius: float | None = None,
-    pre_computed_normals: np.ndarray[np.float64] | None = None,
-) -> np.ndarray[np.float64]:
+    pre_computed_normals: npt.NDArray[np.float64] | None = None,
+) -> npt.NDArray[np.float64]:
     """
     Computes PCA-based normals on a point cloud.
     Reorients normals based on pre-computed normals if provided.
@@ -56,10 +58,10 @@ def compute_normals(
 
 
 def compute_sphericity(
-    query_points: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
+    query_points: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
     radius: float,
-) -> np.ndarray[np.float64]:
+) -> npt.NDArray[np.float64]:
     """
     Computes the sphericity on a point cloud.
     """
@@ -71,14 +73,14 @@ def compute_sphericity(
 
 
 def compute_local_pca_with_moments(
-    query_points: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
+    query_points: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
     nghbrd_search: str = "spherical",
     radius: float | None = None,
     k: int | None = None,
     verbose: bool = False,
 ) -> tuple[
-    np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64], list[int]
+    npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], list[int]
 ]:
     """
     Computes PCA on the neighborhoods of all query_points in cloud_points.
@@ -92,9 +94,11 @@ def compute_local_pca_with_moments(
     neighborhoods = (
         kdtree.query_radius(query_points, radius)
         if nghbrd_search.lower() == "spherical"
-        else kdtree.query(query_points, k=k, return_distance=False)
-        if nghbrd_search.lower() == "knn"
-        else None
+        else (
+            kdtree.query(query_points, k=k, return_distance=False)
+            if nghbrd_search.lower() == "knn"
+            else None
+        )
     )
 
     neighborhood_sizes = [neighborhood.shape[0] for neighborhood in neighborhoods]
@@ -143,14 +147,14 @@ def compute_local_pca_with_moments(
 
 @timeit
 def compute_pca_based_basic_features(
-    query_points: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
+    query_points: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
     radius: float,
 ) -> tuple[
-    np.ndarray[np.float64],
-    np.ndarray[np.float64],
-    np.ndarray[np.float64],
-    np.ndarray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
 ]:
     """
     Computes PCA-based descriptors on a point cloud.
@@ -180,10 +184,10 @@ def compute_pca_based_basic_features(
 
 @timeit
 def compute_pca_based_features(
-    query_points: np.ndarray[np.float64],
-    cloud_points: np.ndarray[np.float64],
+    query_points: npt.NDArray[np.float64],
+    cloud_points: npt.NDArray[np.float64],
     radius: float,
-) -> np.ndarray[np.float64]:
+) -> npt.NDArray[np.float64]:
     """
     Computes PCA-based descriptors on a point cloud.
     """

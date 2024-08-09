@@ -1,10 +1,12 @@
 """
 Generic pipeline with open choices for the algorithms used to select keypoints and filter matches.
 """
+
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 
 from shot_fpfh.analysis import get_incorrect_matches, plot_distance_hists
@@ -34,16 +36,16 @@ class RegistrationPipeline:
     Allows for a selection among a variety of algorithms for keypoint selection, matching, and ICP.
     """
 
-    scan: np.ndarray[np.float64]
-    scan_normals: np.ndarray[np.float64]
-    ref: np.ndarray[np.float64]
-    ref_normals: np.ndarray[np.float64]
+    scan: npt.NDArray[np.float64]
+    scan_normals: npt.NDArray[np.float64]
+    ref: npt.NDArray[np.float64]
+    ref_normals: npt.NDArray[np.float64]
 
     scan_keypoints: np.ndarray[np.int32] | None = None
     ref_keypoints: np.ndarray[np.int32] | None = None
 
-    scan_descriptors: np.ndarray[np.float64] | None = None
-    ref_descriptors: np.ndarray[np.float64] | None = None
+    scan_descriptors: npt.NDArray[np.float64] | None = None
+    ref_descriptors: npt.NDArray[np.float64] | None = None
 
     matches: tuple[np.ndarray[np.int32], np.ndarray[np.int32]] | None = None
 
@@ -172,7 +174,7 @@ class RegistrationPipeline:
         subsampling_voxel_size: float | None = None,
         force_recompute: bool = False,
         **shot_multiprocessor_config: bool | int,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
         reference frames and the other one for the computation of the descriptor.
@@ -211,12 +213,12 @@ class RegistrationPipeline:
 
     def compute_shot_descriptor_multiscale(
         self,
-        radii: list[float] | np.ndarray[np.float64],
-        voxel_sizes: list[float] | np.ndarray[np.float64] | None = None,
-        weights: list[float] | np.ndarray[np.float64] | None = None,
+        radii: list[float] | npt.NDArray[np.float64],
+        voxel_sizes: list[float] | npt.NDArray[np.float64] | None = None,
+        weights: list[float] | npt.NDArray[np.float64] | None = None,
         force_recompute: bool = False,
         **shot_multiprocessor_config: bool | int,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on multiple scales.
         Normals are expected to be normalized to 1.
@@ -539,7 +541,7 @@ class RegistrationPipeline:
         points_aligned_icp = transformation_icp[self.scan]
 
         def get_inlier_points(
-            scan_points: np.ndarray[np.float64], ref_points: np.ndarray[np.float64]
+            scan_points: npt.NDArray[np.float64], ref_points: npt.NDArray[np.float64]
         ) -> np.ndarray[bool]:
             """
             Retrieves a mask on an array of points that indicates whether a point has a neighbor in ref within a certain

@@ -1,7 +1,9 @@
 """
 RANSAC iterations applied to matches between descriptors to find the transformation that aligns best the keypoints.
 """
+
 import numpy as np
+import numpy.typing as npt
 from tqdm import tqdm
 
 from shot_fpfh.base_computation import Transformation, solver_point_to_point
@@ -13,8 +15,8 @@ rng = np.random.default_rng(seed=72)
 def ransac_on_matches(
     scan_descriptors_indices: np.ndarray[np.int32],
     ref_descriptors_indices: np.ndarray[np.int32],
-    scan_keypoints: np.ndarray[np.float64],
-    ref_keypoints: np.ndarray[np.float64],
+    scan_keypoints: npt.NDArray[np.float64],
+    ref_keypoints: npt.NDArray[np.float64],
     n_draws: int = 10000,
     draw_size: int = 4,
     distance_threshold: float = 1,

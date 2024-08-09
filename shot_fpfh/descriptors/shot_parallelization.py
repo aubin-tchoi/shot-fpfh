@@ -3,6 +3,7 @@ from multiprocessing import Pool
 from types import TracebackType
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
@@ -43,11 +44,11 @@ class ShotMultiprocessor:
 
     def compute_local_rf(
         self,
-        keypoints: np.ndarray[np.float64],
+        keypoints: npt.NDArray[np.float64],
         neighborhoods: np.ndarray[np.object_],
-        support: np.ndarray[np.float64],
+        support: npt.NDArray[np.float64],
         radius: float,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Parallelization of the function get_local_rf.
 
@@ -83,13 +84,13 @@ class ShotMultiprocessor:
 
     def compute_descriptor(
         self,
-        keypoints: np.ndarray[np.float64],
-        normals: np.ndarray[np.float64],
+        keypoints: npt.NDArray[np.float64],
+        normals: npt.NDArray[np.float64],
         neighborhoods: np.ndarray[np.object_],
-        local_rfs: np.ndarray[np.float64],
-        support: np.ndarray[np.float64],
+        local_rfs: npt.NDArray[np.float64],
+        support: npt.NDArray[np.float64],
         radius: float,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Parallelization of the function compute_single_shot_descriptor.
 
@@ -132,12 +133,12 @@ class ShotMultiprocessor:
 
     def compute_descriptor_single_scale(
         self,
-        point_cloud: np.ndarray[np.float64],
-        normals: np.ndarray[np.float64],
-        keypoints: np.ndarray[np.float64],
+        point_cloud: npt.NDArray[np.float64],
+        normals: npt.NDArray[np.float64],
+        keypoints: npt.NDArray[np.float64],
         radius: float,
         subsampling_voxel_size: float | None = None,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on a single scale.
         Normals are expected to be normalized to 1.
@@ -182,13 +183,13 @@ class ShotMultiprocessor:
 
     def compute_descriptor_bi_scale(
         self,
-        point_cloud: np.ndarray[np.float64],
-        normals: np.ndarray[np.float64],
-        keypoints: np.ndarray[np.float64],
+        point_cloud: npt.NDArray[np.float64],
+        normals: npt.NDArray[np.float64],
+        keypoints: npt.NDArray[np.float64],
         local_rf_radius: float,
         shot_radius: float,
         subsampling_voxel_size: float | None = None,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on a point cloud with two distinct radii: one for the computation of the local
         reference frames and the other one for the computation of the descriptor.
@@ -238,13 +239,13 @@ class ShotMultiprocessor:
 
     def compute_descriptor_multiscale(
         self,
-        point_cloud: np.ndarray[np.float64],
-        normals: np.ndarray[np.float64],
-        keypoints: np.ndarray[np.float64],
-        radii: list[float] | np.ndarray[np.float64],
-        voxel_sizes: list[float] | np.ndarray[np.float64] | None = None,
-        weights: list[float] | np.ndarray[np.float64] | None = None,
-    ) -> np.ndarray[np.float64]:
+        point_cloud: npt.NDArray[np.float64],
+        normals: npt.NDArray[np.float64],
+        keypoints: npt.NDArray[np.float64],
+        radii: list[float] | npt.NDArray[np.float64],
+        voxel_sizes: list[float] | npt.NDArray[np.float64] | None = None,
+        weights: list[float] | npt.NDArray[np.float64] | None = None,
+    ) -> npt.NDArray[np.float64]:
         """
         Computes the SHOT descriptor on multiple scales.
         Normals are expected to be normalized to 1.
@@ -288,9 +289,9 @@ class ShotMultiprocessor:
                 local_rfs = self.compute_local_rf(
                     keypoints=keypoints,
                     neighborhoods=neighborhoods,
-                    support=point_cloud[support]
-                    if support is not None
-                    else point_cloud,
+                    support=(
+                        point_cloud[support] if support is not None else point_cloud
+                    ),
                     radius=radius,
                 )
             all_descriptors[scale, :, :] = (
@@ -300,9 +301,9 @@ class ShotMultiprocessor:
                     neighborhoods=neighborhoods,
                     local_rfs=local_rfs,
                     radius=radius,
-                    support=point_cloud[support]
-                    if support is not None
-                    else point_cloud,
+                    support=(
+                        point_cloud[support] if support is not None else point_cloud
+                    ),
                 )
                 * weights[scale]
             )

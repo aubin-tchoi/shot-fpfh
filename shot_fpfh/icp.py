@@ -1,7 +1,9 @@
 """
 Implementation of the ICP method.
 """
+
 import numpy as np
+import numpy.typing as npt
 from sklearn.neighbors import KDTree
 from tqdm import trange
 
@@ -14,14 +16,14 @@ from shot_fpfh.base_computation import (
 
 
 def icp_point_to_point_with_sampling(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
     d_max: float,
     max_iter: int = 100,
     rms_threshold: float = 1e-2,
     sampling_limit: int = 100,
     disable_progress_bar: bool = False,
-) -> tuple[np.ndarray[np.float64], float, bool]:
+) -> tuple[npt.NDArray[np.float64], float, bool]:
     """
     Iterative closest point algorithm with a point to point strategy.
     Each iteration is performed on a subsampling of the point clouds to fasten the computation.
@@ -79,8 +81,8 @@ def icp_point_to_point_with_sampling(
 
 
 def icp_point_to_point(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
     transformation_init: Transformation,
     d_max: float,
     voxel_size: float = 0.2,
@@ -135,9 +137,9 @@ def icp_point_to_point(
 
 
 def icp_point_to_plane(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
-    ref_normals: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
+    ref_normals: npt.NDArray[np.float64],
     transformation_init: Transformation,
     d_max: float,
     voxel_size: float = 0.2,

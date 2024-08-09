@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import KDTree
 
@@ -48,8 +49,8 @@ def get_transform_from_conf_file(
 
 
 def check_transform(
-    scan: np.ndarray[np.float64],
-    ref: np.ndarray[np.float64],
+    scan: npt.NDArray[np.float64],
+    ref: npt.NDArray[np.float64],
     transformation: Transformation,
 ) -> None:
     """
