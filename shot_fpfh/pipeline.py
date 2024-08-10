@@ -2,6 +2,7 @@
 Generic pipeline with open choices for the algorithms used to select keypoints and filter matches.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Literal
 
@@ -71,7 +72,8 @@ class RegistrationPipeline:
             force_recompute: Whether the keypoints should be recomputed even if already present.
         """
         if selection_algorithm == "random":
-            print("\n-- Selecting keypoints randomly --")
+            logging.info("")
+            logging.info("-- Selecting keypoints randomly --")
             assert 0 <= proportion_picked <= 1, "Incorrect proportion passed."
             if self.scan_keypoints is None or force_recompute:
                 self.scan_keypoints = select_query_indices_randomly(
@@ -82,7 +84,8 @@ class RegistrationPipeline:
                     self.ref.shape[0], int(self.ref.shape[0] * proportion_picked)
                 )
         elif selection_algorithm == "iterative":
-            print("\n-- Selecting keypoints iteratively --")
+            logging.info("")
+            logging.info("-- Selecting keypoints iteratively --")
             if self.scan_keypoints is None or force_recompute:
                 self.scan_keypoints = select_keypoints_iteratively(
                     self.scan, neighborhood_size
@@ -92,8 +95,9 @@ class RegistrationPipeline:
                     self.ref, neighborhood_size
                 )
         elif selection_algorithm == "subsampling":
-            print(
-                "\n-- Selecting keypoints based on a subsampling of the point cloud --"
+            logging.info("")
+            logging.info(
+                "-- Selecting keypoints based on a subsampling of the point cloud --"
             )
             if self.scan_keypoints is None or force_recompute:
                 self.scan_keypoints = select_keypoints_subsampling(
@@ -104,8 +108,9 @@ class RegistrationPipeline:
                     self.ref, neighborhood_size
                 )
         elif selection_algorithm == "subsampling_with_density":
-            print(
-                "\n-- Selecting keypoints based on a subsampling of the point cloud --"
+            logging.info("")
+            logging.info(
+                "-- Selecting keypoints based on a subsampling of the point cloud --"
             )
             if self.scan_keypoints is None or force_recompute:
                 self.scan_keypoints = select_keypoints_with_density_threshold(
@@ -117,10 +122,10 @@ class RegistrationPipeline:
                 )
         else:
             raise ValueError("Incorrect keypoint selection algorithm.")
-        print(
+        logging.info(
             f"{self.scan_keypoints.shape[0]} descriptors selected on scan out of {self.scan.shape[0]} points."
         )
-        print(
+        logging.info(
             f"{self.ref_keypoints.shape[0]} descriptors selected on ref out of {self.ref.shape[0]} points."
         )
 
@@ -144,7 +149,8 @@ class RegistrationPipeline:
         Returns:
             The descriptor as a (self.keypoints.shape[0], 352) array.
         """
-        print("\n-- Computing single-scale SHOT descriptors --")
+        logging.info("")
+        logging.info("-- Computing single-scale SHOT descriptors --")
         with ShotMultiprocessor(**shot_multiprocessor_config) as shot_multiprocessor:
             if self.scan_descriptors is None or force_recompute:
                 self.scan_descriptors = (
@@ -190,7 +196,10 @@ class RegistrationPipeline:
         Returns:
             The descriptor as a (self.keypoints.shape[0], 352) array.
         """
-        print("\n-- Computing SHOT descriptors with two scales (local RF and SHOT) --")
+        logging.info("")
+        logging.info(
+            "-- Computing SHOT descriptors with two scales (local RF and SHOT) --"
+        )
         with ShotMultiprocessor(**shot_multiprocessor_config) as shot_multiprocessor:
             if self.scan_descriptors is None or force_recompute:
                 self.scan_descriptors = shot_multiprocessor.compute_descriptor_bi_scale(
@@ -233,7 +242,8 @@ class RegistrationPipeline:
         Returns:
             The descriptor as a (self.keypoints.shape[0], 352 * n_scales) array.
         """
-        print("\n-- Computing multi-scale SHOT descriptors --")
+        logging.info("")
+        logging.info("-- Computing multi-scale SHOT descriptors --")
         with ShotMultiprocessor(**shot_multiprocessor_config) as shot_multiprocessor:
             if self.scan_descriptors is None or force_recompute:
                 self.scan_descriptors = (
@@ -358,8 +368,9 @@ class RegistrationPipeline:
             force_recompute: Whether the descriptors should be recomputed even if already present.
         """
         if matching_algorithm == "simple":
-            print(
-                "\n-- Matching descriptors using simple matching to closest neighbor --"
+            logging.info("")
+            logging.info(
+                "-- Matching descriptors using simple matching to closest neighbor --"
             )
             if self.matches is None or force_recompute:
                 self.matches = basic_matching(
@@ -367,14 +378,18 @@ class RegistrationPipeline:
                 )
 
         elif matching_algorithm == "double":
-            print("\n-- Matching descriptors using double matching with rejects --")
+            logging.info("")
+            logging.info(
+                "-- Matching descriptors using double matching with rejects --"
+            )
             if self.matches is None or force_recompute:
                 self.matches = double_matching_with_rejects(
                     self.scan_descriptors, self.ref_descriptors, reject_threshold
                 )
 
         elif matching_algorithm == "threshold":
-            print("\n-- Matching descriptors using threshold-based matching --")
+            logging.info("")
+            logging.info("-- Matching descriptors using threshold-based matching --")
             if self.matches is None or force_recompute:
                 self.matches = match_descriptors(
                     self.scan_descriptors,
@@ -392,7 +407,7 @@ class RegistrationPipeline:
                 - self.ref_descriptors[self.matches[1]],
                 axis=0,
             ).max(initial=0)
-            print(
+            logging.info(
                 f"Maximum distance between the descriptors matched: " f"{max_dist:.2f}"
             )
 
@@ -414,7 +429,7 @@ class RegistrationPipeline:
             self.ref_keypoints[self.matches[1]],
             exact_transformation,
         )
-        print(
+        logging.info(
             f"SHOT: {incorrect_matches_shot.sum()} incorrect matches out of {self.matches[0].shape[0]} matches and "
             f"{self.scan_descriptors.shape[0]} descriptors."
         )
@@ -449,7 +464,8 @@ class RegistrationPipeline:
         Returns:
             The resulting transformation, and the ratio of inliers on the keypoints.
         """
-        print("\n -- Aligning the point clouds by RANSAC-ing the matches --")
+        logging.info("")
+        logging.info(" -- Aligning the point clouds by RANSAC-ing the matches --")
         inliers_ratio, transformation = ransac_on_matches(
             *self.matches,
             self.scan[self.scan_keypoints],
@@ -460,7 +476,7 @@ class RegistrationPipeline:
             disable_progress_bar=disable_progress_bar,
         )
         if exact_transformation is not None:
-            print(
+            logging.info(
                 f"Norm of the angle between the two rotations: "
                 f"{abs(np.arccos((np.trace(exact_transformation.rotation @ transformation.rotation.T) - 1) / 2)):.2f}"
                 f"\nNorm of the difference between the two translation: "
@@ -476,7 +492,7 @@ class RegistrationPipeline:
         *,
         d_max: float,
         voxel_size: float = 0.2,
-        max_iter: int = 100,
+        max_iter: int = 30,
         rms_threshold: float = 1e-2,
         disable_progress_bar: bool = False,
     ) -> tuple[RigidTransform, float, bool]:
@@ -496,7 +512,8 @@ class RegistrationPipeline:
             The resulting transformation, the residual error and whether the ICP has converged.
         """
         if icp_type == "point_to_point":
-            print("\n-- Running point-to-point ICP --")
+            logging.info("")
+            logging.info("-- Running point-to-point ICP --")
             return icp_point_to_point(
                 self.scan,
                 self.ref,
@@ -508,7 +525,8 @@ class RegistrationPipeline:
                 disable_progress_bar=disable_progress_bar,
             )
         elif icp_type == "point_to_plane":
-            print("\n-- Running point-to-plane ICP --")
+            logging.info("")
+            logging.info("-- Running point-to-plane ICP --")
             return icp_point_to_plane(
                 self.scan,
                 self.ref,

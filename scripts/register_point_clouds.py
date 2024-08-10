@@ -1,7 +1,11 @@
 import argparse
 import gc
+import logging
 import warnings
+from dataclasses import asdict
 from pathlib import Path
+
+import coloredlogs
 
 from scripts.parse_args import parse_args
 from shot_fpfh import (
@@ -12,6 +16,7 @@ from shot_fpfh import (
     get_data,
     get_incorrect_matches,
     get_transform_from_conf_file,
+    load_config_from_yaml,
 )
 
 warnings.filterwarnings("ignore")
@@ -25,7 +30,23 @@ def main(args: argparse.Namespace | None = None) -> None:
     Args:
         args: Arguments parsed from command-line using argparse.
     """
+    coloredlogs.install(
+        level="INFO",
+        fmt="%(asctime)s %(levelname)-7s %(message)s",
+        field_styles={
+            "levelname": {"color": "black", "bright": True, "bold": True},
+            "asctime": {"color": "magenta", "bright": True},
+        },
+        level_styles={
+            "info": {"color": "cyan", "faint": True},
+            "critical": {"color": "red", "bold": True},
+            "error": {"color": "red", "bright": True},
+            "warning": {"color": "yellow", "bright": True},
+        },
+    )
+
     args = args or parse_args()
+    configuration = load_config_from_yaml(args.config, vars(args))
 
     global_timer = checkpoint()
     timer = checkpoint()
@@ -46,7 +67,7 @@ def main(args: argparse.Namespace | None = None) -> None:
             args.conf_file_path, args.scan_file_path, args.ref_file_path
         )
     except (FileNotFoundError, KeyError):
-        print(
+        logging.warning(
             f"Conf file not found or incorrect under {args.conf_file_path}, ignoring it."
         )
 
@@ -59,17 +80,11 @@ def main(args: argparse.Namespace | None = None) -> None:
     pipeline = RegistrationPipeline(
         scan=scan, scan_normals=scan_normals, ref=ref, ref_normals=ref_normals
     )
-    pipeline.select_keypoints(
-        args.keypoint_selection,
-        neighborhood_size=args.keypoint_voxel_size,
-        min_n_neighbors=args.keypoint_density_threshold,
-    )
+    pipeline.select_keypoints(**asdict(configuration["keypoint_selection"]))
     timer("Time spent selecting the key points")
 
     pipeline.compute_descriptors(
-        descriptor_choice=args.descriptor_choice,
-        radius=args.radius,
-        fpfh_n_bins=args.fpfh_n_bins,
+        **asdict(configuration["descriptor"]),
         disable_progress_bars=args.disable_progress_bars,
     )
     timer(
@@ -77,11 +92,7 @@ def main(args: argparse.Namespace | None = None) -> None:
     )
     gc.collect()
 
-    pipeline.find_descriptors_matches(
-        args.matching_algorithm,
-        reject_threshold=args.reject_threshold,
-        threshold_multiplier=args.threshold_multiplier,
-    )
+    pipeline.find_descriptors_matches(**asdict(configuration["matching"]))
     timer("Time spent finding matches between the descriptors")
 
     if exact_transformation is not None:
@@ -90,39 +101,32 @@ def main(args: argparse.Namespace | None = None) -> None:
             pipeline.ref[pipeline.ref_keypoints][pipeline.matches[1]],
             exact_transformation,
         )
-        print(
+        logging.info(
             f"{correct_matches.sum()} correct matches out of {pipeline.scan_descriptors.shape[0]} descriptors."
         )
 
     transformation_ransac, inliers_ratio = pipeline.run_ransac(
-        n_draws=args.n_ransac_draws,
-        draw_size=args.ransac_draw_size,
-        max_inliers_distance=args.ransac_max_inliers_dist,
+        **asdict(configuration["ransac"]),
         exact_transformation=exact_transformation,
         disable_progress_bar=args.disable_progress_bars,
     )
     timer("Time spent on RANSAC")
-    print(
+    logging.info(
         f"\nRatio of inliers pre-ICP: {inliers_ratio * 100:.2f}%\nTransformation pre-ICP:"
     )
     print(transformation_ransac)
     gc.collect()
 
     transformation_icp, distance_to_map, has_icp_converged = pipeline.run_icp(
-        args.icp_type,
-        transformation_ransac,
-        d_max=args.icp_d_max,
-        voxel_size=args.icp_voxel_size,
-        max_iter=args.icp_max_iter,
-        rms_threshold=args.icp_rms_threshold,
+        transformation_init=transformation_ransac,
+        **asdict(configuration["icp"]),
         disable_progress_bar=args.disable_progress_bars,
     )
     overlap, inliers_ratio_post_icp = pipeline.compute_metrics_post_icp(
-        transformation_icp,
-        args.icp_d_max,
+        transformation_icp, args.d_max
     )
     timer("Time spent on ICP")
-    print(
+    logging.info(
         f"\nRMS error on the ICP:  {distance_to_map:.4f} (has converged: {'OK'[::has_icp_converged * 2 - 1]})."
         f"\nProportion of inliers: {inliers_ratio_post_icp * 100:.2f}%"
         f"\nPercentage of overlap: {overlap * 100:.2f}%"
@@ -131,8 +135,9 @@ def main(args: argparse.Namespace | None = None) -> None:
     print(transformation_icp)
 
     if not args.disable_ply_writing:
-        print(
-            "\n -- Writing the aligned points cloud in ply files under './data/results' --"
+        logging.info("")
+        logging.info(
+            " -- Writing the aligned points cloud in ply files under './data/results' --"
         )
         (results_folder := Path("../data/results")).mkdir(exist_ok=True, parents=True)
         file_name = (

@@ -5,6 +5,8 @@ Fast Point Feature Histograms (FPFH) for 3D registration,
 2009 IEEE International Conference on Robotics and Automation
 """
 
+import logging
+
 import numpy as np
 import numpy.typing as npt
 from sklearn.neighbors import KDTree
@@ -88,7 +90,7 @@ def compute_fpfh_descriptor(
             neighborhood_size += neighborhoods[i].shape[0]
 
     if verbose:
-        print(
+        logging.info(
             f"Mean neighborhood size over the whole point cloud: {neighborhood_size / cloud_points.shape[0]:.2f}"
         )
 

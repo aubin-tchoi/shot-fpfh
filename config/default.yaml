@@ -1,0 +1,40 @@
+registration:
+  keypoint_selection:
+    selection_algorithm: "subsampling_with_density"
+    neighborhood_size: ~
+    min_n_neighbors: ~
+
+  descriptor:
+    radius: 3.0
+    descriptor_choice: "shot_single_scale"
+    fpfh_n_bins: 5
+    phi: 3.0
+    rho: 10.0
+    n_scales: 2
+    subsample_support: true
+    normalize: true
+    share_local_rfs: true
+    min_neighborhood_size: 100
+    n_procs: 8
+
+  matching:
+    matching_algorithm: "simple"
+    reject_threshold: 0.8
+    threshold_multiplier: 10
+
+  ransac:
+    n_draws: 10000
+    draw_size: 4
+    max_inliers_distance: 1.0
+
+  icp:
+    icp_type: "point_to_plane"
+    d_max: 0.5
+    voxel_size: 0.2
+    max_iter: 50
+    rms_threshold: 1e-3
+
+  registration_evaluation:
+    overlap_threshold: 0.6
+    distance_to_map_threshold: 0.1
+    inliers_threshold: 0.5

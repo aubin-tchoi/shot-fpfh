@@ -13,6 +13,7 @@ scikit-learn = "^1.2.2"
 matplotlib = "^3.7.1"
 tqdm = "^4.65.0"
 fonttools = "^4.40.0"
+coloredlogs = "^15.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.8.0"

@@ -3,8 +3,17 @@ Filter functions that can be used to filter matches between descriptors based on
 matched descriptors.
 """
 
+from typing import Any, Protocol
+
 import numpy as np
 import numpy.typing as npt
+
+
+class FilterFunction(Protocol):
+    def __call__(
+        self, distances: npt.NDArray[np.float64], *args: Any, **kwargs: Any
+    ) -> npt.NDArray[np.bool_]:
+        ...
 
 
 def threshold_filter(

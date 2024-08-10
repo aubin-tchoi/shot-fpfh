@@ -2,6 +2,8 @@
 Implementation of the ICP method.
 """
 
+import logging
+
 import numpy as np
 import numpy.typing as npt
 from sklearn.neighbors import KDTree
@@ -70,7 +72,7 @@ def icp_point_to_point_with_sampling(
             if rms < rms_threshold:
                 break
         except KeyboardInterrupt:
-            print("ICP interrupted by user.")
+            logging.info("ICP interrupted by user.")
             break
 
     return points_aligned, rms, rms < rms_threshold
@@ -119,10 +121,10 @@ def icp_point_to_point(
             transformation_icp = transformation_aligned_to_ref @ transformation_icp
             progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
             if rms < rms_threshold:
-                print("RMS threshold reached.")
+                logging.info("RMS threshold reached.")
                 break
         except KeyboardInterrupt:
-            print("ICP interrupted by user.")
+            logging.info("ICP interrupted by user.")
             break
 
     return transformation_icp, rms, rms < rms_threshold
@@ -178,10 +180,10 @@ def icp_point_to_plane(
             ).mean(axis=0)
             progress_bar.set_description(f"ICP - current RMS: {rms:.2f}")
             if rms < rms_threshold:
-                print("RMS threshold reached.")
+                logging.info("RMS threshold reached.")
                 break
         except KeyboardInterrupt:
-            print("ICP interrupted by user.")
+            logging.info("ICP interrupted by user.")
             break
 
     return transformation_icp, rms, rms < rms_threshold
