@@ -77,7 +77,6 @@ class DescriptorConfig(Config):
     share_local_rfs: bool = True
     min_neighborhood_size: int = 100
     n_procs: int = 8
-    disable_progress_bars: bool = False
 
     def help_message(self) -> str:
         match self.descriptor_choice:
@@ -127,29 +126,6 @@ class DescriptorConfig(Config):
                     f" -- radius: {self.radius}\n"
                     f" -- number of bins: {self.fpfh_n_bins}"
                 )
-
-    def minimal_config(self) -> dict[str, bool | int]:
-        """
-        Retrieves a subset of the dataclass as a dict with the parameters effectively used by a ShotMultiprocessor as
-        attributes.
-
-        Returns:
-            A dict containing the parameters used by an instance of ShotMultiprocessor (the keys of this dict match the
-            attribute names).
-        """
-        return {
-            param: value
-            for param, value in asdict(self).items()
-            if param
-            in [
-                "normalize",
-                "share_local_rfs",
-                "min_neighborhood_size",
-                "n_procs",
-                "disable_progress_bar",
-                "verbose",
-            ]
-        }
 
 
 @dataclass

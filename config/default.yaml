@@ -16,7 +16,6 @@ registration:
     share_local_rfs: true
     min_neighborhood_size: 100
     n_procs: 8
-    disable_progress_bars: False
 
   matching:
     matching_algorithm: "simple"
