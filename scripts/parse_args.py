@@ -21,7 +21,10 @@ def add_io_parameters(parser) -> None:
         help="Path to the .conf file used to count correct matches. Leave empty to ignore.",
     )
     parser.add_argument(
-        "--config", type=str, help="Path to the YAML configuration file.", required=True
+        "--config",
+        default="./config/default.yaml",
+        type=str,
+        help="Path to the YAML configuration file.",
     )
     parser.add_argument(
         "--disable_ply_writing",
