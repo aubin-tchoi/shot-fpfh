@@ -492,7 +492,7 @@ class RegistrationPipeline:
         *,
         d_max: float,
         voxel_size: float = 0.2,
-        max_iter: int = 100,
+        max_iter: int = 30,
         rms_threshold: float = 1e-2,
         disable_progress_bar: bool = False,
     ) -> tuple[RigidTransform, float, bool]:

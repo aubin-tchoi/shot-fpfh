@@ -2,6 +2,7 @@ import argparse
 import gc
 import logging
 import warnings
+from dataclasses import asdict
 from pathlib import Path
 
 import coloredlogs
@@ -15,6 +16,7 @@ from shot_fpfh import (
     get_data,
     get_incorrect_matches,
     get_transform_from_conf_file,
+    load_config_from_yaml,
 )
 
 warnings.filterwarnings("ignore")
@@ -44,6 +46,7 @@ def main(args: argparse.Namespace | None = None) -> None:
     )
 
     args = args or parse_args()
+    configuration = load_config_from_yaml(args.config, vars(args))
 
     global_timer = checkpoint()
     timer = checkpoint()
@@ -77,17 +80,11 @@ def main(args: argparse.Namespace | None = None) -> None:
     pipeline = RegistrationPipeline(
         scan=scan, scan_normals=scan_normals, ref=ref, ref_normals=ref_normals
     )
-    pipeline.select_keypoints(
-        args.keypoint_selection,
-        neighborhood_size=args.keypoint_voxel_size,
-        min_n_neighbors=args.keypoint_density_threshold,
-    )
+    pipeline.select_keypoints(**asdict(configuration["keypoint_selection"]))
     timer("Time spent selecting the key points")
 
     pipeline.compute_descriptors(
-        descriptor_choice=args.descriptor_choice,
-        radius=args.radius,
-        fpfh_n_bins=args.fpfh_n_bins,
+        **asdict(configuration["descriptor"]),
         disable_progress_bars=args.disable_progress_bars,
     )
     timer(
@@ -95,11 +92,7 @@ def main(args: argparse.Namespace | None = None) -> None:
     )
     gc.collect()
 
-    pipeline.find_descriptors_matches(
-        args.matching_algorithm,
-        reject_threshold=args.reject_threshold,
-        threshold_multiplier=args.threshold_multiplier,
-    )
+    pipeline.find_descriptors_matches(**asdict(configuration["matching"]))
     timer("Time spent finding matches between the descriptors")
 
     if exact_transformation is not None:
@@ -113,9 +106,7 @@ def main(args: argparse.Namespace | None = None) -> None:
         )
 
     transformation_ransac, inliers_ratio = pipeline.run_ransac(
-        n_draws=args.n_ransac_draws,
-        draw_size=args.ransac_draw_size,
-        max_inliers_distance=args.ransac_max_inliers_dist,
+        **asdict(configuration["ransac"]),
         exact_transformation=exact_transformation,
         disable_progress_bar=args.disable_progress_bars,
     )
@@ -127,17 +118,10 @@ def main(args: argparse.Namespace | None = None) -> None:
     gc.collect()
 
     transformation_icp, distance_to_map, has_icp_converged = pipeline.run_icp(
-        args.icp_type,
-        transformation_ransac,
-        d_max=args.icp_d_max,
-        voxel_size=args.icp_voxel_size,
-        max_iter=args.icp_max_iter,
-        rms_threshold=args.icp_rms_threshold,
-        disable_progress_bar=args.disable_progress_bars,
+        **asdict(configuration["icp"]), disable_progress_bar=args.disable_progress_bars
     )
     overlap, inliers_ratio_post_icp = pipeline.compute_metrics_post_icp(
-        transformation_icp,
-        args.icp_d_max,
+        transformation_icp, args.d_max
     )
     timer("Time spent on ICP")
     logging.info(

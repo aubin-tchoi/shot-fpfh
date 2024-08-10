@@ -21,6 +21,9 @@ def add_io_parameters(parser) -> None:
         help="Path to the .conf file used to count correct matches. Leave empty to ignore.",
     )
     parser.add_argument(
+        "--config", type=str, help="Path to the YAML configuration file.", required=True
+    )
+    parser.add_argument(
         "--disable_ply_writing",
         action="store_true",
         help="Skips saving the registered point cloud as ply files.",
@@ -34,20 +37,20 @@ def add_io_parameters(parser) -> None:
 
 def add_keypoint_parameters(parser) -> None:
     parser.add_argument(
-        "--keypoint_selection",
+        "--selection_algorithm",
         choices=["random", "iterative", "subsampling"],
         type=str,
         default="subsampling",
         help="Choice of the algorithm to select keypoints to compute descriptors on.",
     )
     parser.add_argument(
-        "--keypoint_voxel_size",
+        "--neighborhood_size",
         type=float,
         default=0.005,
         help="Size of the voxels in the subsampling-based keypoint selection.",
     )
     parser.add_argument(
-        "--keypoint_density_threshold",
+        "--min_n_neighbors",
         type=int,
         default=100,
         help="Minimum number of neighbors used to filter keypoints.",
@@ -124,19 +127,19 @@ def add_matching_parameters(parser) -> None:
     )
     # RANSAC
     parser.add_argument(
-        "--n_ransac_draws",
+        "--n_draws",
         type=int,
         default=5000,
         help="Number of draws in the RANSAC method for descriptors matching.",
     )
     parser.add_argument(
-        "--ransac_draw_size",
+        "--draw_size",
         type=int,
         default=4,
         help="Size of the draws in the RANSAC method for descriptors matching.",
     )
     parser.add_argument(
-        "--ransac_max_inliers_dist",
+        "--max_inliers_distance",
         type=float,
         default=0.001,
         help="Threshold on the distance between inliers in the RANSAC method.",
@@ -151,25 +154,25 @@ def add_icp_parameters(parser) -> None:
         help="Type of ICP performed.",
     )
     parser.add_argument(
-        "--icp_max_iter",
+        "--max_iter",
         type=int,
         default=70,
         help="Maximum number of iteration in the ICP.",
     )
     parser.add_argument(
-        "--icp_rms_threshold",
+        "--rms_threshold",
         type=float,
         default=0.01,
         help="RMS threshold set on the ICP.",
     )
     parser.add_argument(
-        "--icp_d_max",
+        "--d_max",
         type=float,
         default=0.01,
         help="Maximum distance between two inliers in the ICP.",
     )
     parser.add_argument(
-        "--icp_voxel_size",
+        "--voxel_size",
         type=float,
         default=0.001,
         help="Size of the voxels in the subsampling performed to select a subset of the points for the ICP.",
