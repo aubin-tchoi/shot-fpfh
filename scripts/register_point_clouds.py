@@ -118,7 +118,9 @@ def main(args: argparse.Namespace | None = None) -> None:
     gc.collect()
 
     transformation_icp, distance_to_map, has_icp_converged = pipeline.run_icp(
-        **asdict(configuration["icp"]), disable_progress_bar=args.disable_progress_bars
+        transformation_init=transformation_ransac,
+        **asdict(configuration["icp"]),
+        disable_progress_bar=args.disable_progress_bars,
     )
     overlap, inliers_ratio_post_icp = pipeline.compute_metrics_post_icp(
         transformation_icp, args.d_max
